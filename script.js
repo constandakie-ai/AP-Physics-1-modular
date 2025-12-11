@@ -53,48 +53,49 @@ function loadSim(id) {
 // === PASTE YOUR SIMULATIONS BELOW THIS LINE ===
 // ===============================================
 
-    // ===============================================
-    // === UNIT 2.4: FRICTION CHALLENGE (AP LEVEL) ===
+// ===============================================
+    // === UNIT 2.4: FRICTION CHALLENGE (AP LEVEL v7) ===
     // ===============================================
 
     // --- AP-LEVEL QUIZ DATA ---
+    // acceptedUnits: list of valid strings. val: numeric answer.
     const u24_questions = [
         {
             tier: 1,
-            q: "A 10 kg block sits on a flat surface. What is the Normal Force (Fn)? (Use g=9.8)",
-            a: ["98", "98n", "98 newtons"], 
-            hint: "On a flat surface, Fn = mg."
+            q: "A 10 kg block sits on a level surface. What is the Normal Force (<i>F<sub>N</sub></i>)? (Assume <i>g</i> = 9.8 m/s²)",
+            val: 98,
+            units: ["n", "newton", "newtons"],
+            hint: "On a level surface, <i>F<sub>N</sub> = mg</i>. Don't forget the unit (N)!"
         },
         {
             tier: 2,
-            q: "If mass = 5kg and μs = 0.4, what is the MAX Static Friction force?",
-            a: ["19.6", "19.6n"],
-            hint: "fs_max = μs * Fn. (Fn = 5 * 9.8)"
+            q: "If mass = 5 kg and <i>&mu;<sub>s</sub></i> = 0.4 on a level surface, what is the MAX Static Friction force?",
+            val: 19.6,
+            units: ["n", "newton", "newtons"],
+            hint: "<i>f<sub>s,max</sub> = &mu;<sub>s</sub>F<sub>N</sub></i>. (<i>F<sub>N</sub></i> = 5 kg * 9.8 m/s²)"
         },
         {
             tier: 3,
-            q: "A 4kg block moves with μk = 0.3. What is the Kinetic Friction force?",
-            a: ["11.76", "11.8", "12"],
-            hint: "fk = μk * mg. (4 * 9.8 * 0.3)"
+            q: "A 4 kg block moves on a level surface with <i>&mu;<sub>k</sub></i> = 0.3. What is the kinetic friction force?",
+            val: 11.76,
+            units: ["n", "newton", "newtons"],
+            hint: "<i>f<sub>k</sub> = &mu;<sub>k</sub>F<sub>N</sub></i>."
         },
         {
             tier: 4,
-            q: "A 2kg block is pushed with 10N. Kinetic friction is 4N. What is the acceleration?",
-            a: ["3", "3.0", "3 m/s^2"],
-            hint: "Fnet = ma. Fnet = 10 - 4. Solve for a."
+            q: "A 2 kg block is pushed with 10 N. Kinetic friction is 4 N. What is the acceleration?",
+            val: 3,
+            units: ["m/s^2", "m/s2", "ms^-2", "m/s/s"],
+            hint: "<i>F<sub>net</sub> = ma</i>. <i>F<sub>net</sub></i> = 10 N - 4 N. Solve for <i>a</i> (in m/s²)."
         }
     ];
 
     function setup_2_4() {
         document.getElementById('sim-title').innerText = "2.4 Static vs. Kinetic Friction (AP Lab)";
         
-        // 1. Resize Canvas for visibility
-        canvas.height = 600; // Increased height
-        
-        // 2. Setup Controls
+        canvas.height = 600; // Layout Fix
         document.getElementById('sim-controls').innerHTML = `<div id="controls-area"></div>`;
         
-        // 3. Setup Quiz Panel
         let existingQuiz = document.getElementById('quiz-area');
         if (existingQuiz) existingQuiz.remove();
         
@@ -103,7 +104,6 @@ function loadSim(id) {
         quizDiv.className = 'quiz-panel';
         document.querySelector('.canvas-area').after(quizDiv);
         
-        // Initial State
         state = {
             Fa: 0, m: 5.0, mu_s: 0.6, mu_k: 0.4,
             v: 0, x: 0,
@@ -126,10 +126,13 @@ function loadSim(id) {
         const isLocked = (req) => lvl < req ? 'locked-group' : '';
         const lockIcon = (req) => lvl < req ? '<span style="float:right;">🔒</span>' : '';
 
+        // Helper to update slider labels immediately
+        window.updateLabel = (id, val) => document.getElementById(id).innerText = parseFloat(val).toFixed(2);
+
         let html = `
             <div class="control-group">
-                <label>Block Mass (<i class="var">m</i>): <span id="v-m">${state.m}</span> kg</label>
-                <input type="range" id="in-m" min="1.0" max="10.0" step="0.5" value="${state.m}" oninput="reset_graph_2_4()">
+                <label>Block Mass (<i class="var">m</i>): <span id="v-m">${state.m.toFixed(1)}</span> kg</label>
+                <input type="range" id="in-m" min="1.0" max="10.0" step="0.5" value="${state.m}" oninput="state.m=parseFloat(this.value); updateLabel('v-m', this.value); reset_graph_2_4()">
             </div>
 
             <div class="control-group ${isLocked(1)}">
@@ -138,12 +141,12 @@ function loadSim(id) {
             </div>
 
             <div class="control-group ${isLocked(2)}">
-                <label>Static Coeff (&mu;<sub>s</sub>) ${lockIcon(2)}</label>
-                <input type="range" id="in-mus" min="0.1" max="1.0" step="0.05" value="${state.mu_s}" oninput="reset_graph_2_4()">
+                <label>Static Coeff (<i>&mu;<sub>s</sub></i>): <span id="v-mus">${state.mu_s.toFixed(2)}</span> ${lockIcon(2)}</label>
+                <input type="range" id="in-mus" min="0.1" max="1.0" step="0.05" value="${state.mu_s}" oninput="state.mu_s=parseFloat(this.value); updateLabel('v-mus', this.value); reset_graph_2_4()">
             </div>
             <div class="control-group ${isLocked(2)}">
-                <label>Kinetic Coeff (&mu;<sub>k</sub>) ${lockIcon(2)}</label>
-                <input type="range" id="in-muk" min="0.1" max="1.0" step="0.05" value="${state.mu_k}" oninput="reset_graph_2_4()">
+                <label>Kinetic Coeff (<i>&mu;<sub>k</sub></i>): <span id="v-muk">${state.mu_k.toFixed(2)}</span> ${lockIcon(2)}</label>
+                <input type="range" id="in-muk" min="0.1" max="1.0" step="0.05" value="${state.mu_k}" oninput="state.mu_k=parseFloat(this.value); updateLabel('v-muk', this.value); reset_graph_2_4()">
             </div>
 
             <div class="control-group ${isLocked(3)}">
@@ -163,7 +166,7 @@ function loadSim(id) {
         document.getElementById('controls-area').innerHTML = html;
     }
 
-    // --- QUIZ LOGIC ---
+    // --- STRICT UNIT CHECKING ---
     function render_2_4_Quiz() {
         let qDiv = document.getElementById('quiz-area');
         if (!qDiv) return;
@@ -176,32 +179,44 @@ function loadSim(id) {
         let currQ = u24_questions[state.level];
         qDiv.innerHTML = `
             <div class="quiz-question" style="font-weight:bold; margin-bottom:5px;">AP Challenge Level ${state.level + 1}: ${currQ.q}</div>
-            <input type="text" id="q-input" class="quiz-input" placeholder="Enter value..." style="padding:5px;">
-            <button class="quiz-btn" onclick="check_2_4()" style="padding:5px 15px;">Submit</button>
+            <div style="display:flex; gap:5px;">
+                <input type="text" id="q-input" class="quiz-input" placeholder="Value (e.g. 98)" style="flex:1; padding:5px;">
+                <input type="text" id="q-unit" class="quiz-input" placeholder="Unit (e.g. N)" style="width:80px; padding:5px;">
+                <button class="quiz-btn" onclick="check_2_4()" style="padding:5px 15px;">Submit</button>
+            </div>
             <div id="q-feedback" class="quiz-feedback" style="margin-top:5px;"></div>
         `;
     }
 
     function check_2_4() {
-        let input = document.getElementById('q-input').value.toLowerCase().trim();
+        let valInput = parseFloat(document.getElementById('q-input').value);
+        let unitInput = document.getElementById('q-unit').value.toLowerCase().trim();
         let currQ = u24_questions[state.level];
         let feedback = document.getElementById('q-feedback');
         
-        // Simple string matching for now (could be regex for ranges)
-        if (currQ.a.includes(input)) {
+        // 1. Check Value (within 2% tolerance for rounding)
+        let tolerance = currQ.val * 0.02; 
+        let valCorrect = Math.abs(valInput - currQ.val) <= tolerance;
+
+        // 2. Check Unit
+        let unitCorrect = currQ.units.includes(unitInput);
+
+        if (valCorrect && unitCorrect) {
             feedback.innerHTML = "<span style='color:#27ae60'>✅ Correct! Unlocking...</span>";
             state.level++;
             setTimeout(() => {
                 render_2_4_UI();
                 render_2_4_Quiz();
             }, 1000);
+        } else if (!valCorrect) {
+            feedback.innerHTML = `<span style='color:#c0392b'>❌ value incorrect. Hint: ${currQ.hint}</span>`;
         } else {
-            feedback.innerHTML = `<span style='color:#c0392b'>❌ Try again. Hint: ${currQ.hint}</span>`;
+            feedback.innerHTML = `<span style='color:#e67e22'>⚠️ Number is right, but check your units!</span>`;
         }
     }
 
     function reset_graph_2_4() {
-        // Update State from DOM
+        // Update state logic
         state.m = parseFloat(document.getElementById('in-m').value);
         if(document.getElementById('in-mus')) {
             state.mu_s = parseFloat(document.getElementById('in-mus').value);
@@ -211,8 +226,12 @@ function loadSim(id) {
         state.graphData = [];
         state.lastFa = -1;
         state.v = 0; state.x = 0;
-        state.maxFriction = 100; // Fixed Scale
-        document.getElementById('v-m').innerText = state.m.toFixed(1);
+        state.maxFriction = 100;
+        
+        // Ensure UI labels match state
+        if(document.getElementById('v-m')) document.getElementById('v-m').innerText = state.m.toFixed(1);
+        if(document.getElementById('v-mus')) document.getElementById('v-mus').innerText = state.mu_s.toFixed(2);
+        if(document.getElementById('v-muk')) document.getElementById('v-muk').innerText = state.mu_k.toFixed(2);
     }
 
     function loop_2_4() {
@@ -230,7 +249,6 @@ function loadSim(id) {
         let status = "static";
         
         if (Math.abs(state.v) < 0.001) {
-            // Static
             if (state.Fa <= fs_max) {
                 friction = state.Fa;
                 state.v = 0;
@@ -245,7 +263,6 @@ function loadSim(id) {
                 status = "kinetic";
             }
         } else {
-            // Kinetic
             friction = fk;
             status = "kinetic";
             Fnet = state.Fa - fk;
@@ -272,13 +289,10 @@ function loadSim(id) {
     }
 
     function draw_2_4(fVal, Fn, status) {
-        // Use full height 600
         ctx.clearRect(0,0,700,600); 
         
         // --- TOP PANEL (SIMULATION) ---
-        // Moved floor down to y=250 to allow space for vectors
         let floorY = 250;
-        
         ctx.fillStyle = "#ecf0f1"; ctx.fillRect(0,0,700,270); // Sky
         ctx.fillStyle = "#bdc3c7"; ctx.fillRect(0,floorY,700,20); // Floor
         
@@ -290,13 +304,13 @@ function loadSim(id) {
         ctx.fillStyle = "#e67e22"; ctx.fillRect(drawX, by, size, size);
         ctx.strokeStyle = "#d35400"; ctx.lineWidth=2; ctx.strokeRect(drawX, by, size, size);
         ctx.fillStyle = "white"; ctx.font = "bold 12px serif"; ctx.textAlign="center";
-        ctx.fillText(state.m+"kg", drawX + size/2, by + size/2 + 4);
+        ctx.fillText(state.m.toFixed(1)+"kg", drawX + size/2, by + size/2 + 4);
 
         // VECTORS
         let cx = drawX + size/2; 
         let cy = by + size/2;
         
-        // Gravity (Now has room!)
+        // Gravity
         let fgLen = (state.m * 9.8) * 0.8; 
         drawVector(cx, cy + size/2, 0, fgLen, "green"); 
         ctx.fillStyle="black"; ctx.fillText("Fg", cx+5, cy + size/2 + fgLen + 10);
@@ -334,7 +348,6 @@ function loadSim(id) {
         
         ctx.fillStyle = "white"; ctx.beginPath(); ctx.arc(bubbleX, bubbleY, r, 0, Math.PI*2); ctx.fill();
         ctx.strokeStyle = "#333"; ctx.lineWidth=3; ctx.stroke();
-        
         ctx.save();
         ctx.beginPath(); ctx.rect(bubbleX-r, bubbleY-r, 2*r, 2*r); ctx.clip(); 
         ctx.strokeStyle = "#e67e22"; ctx.lineWidth=3; 
@@ -349,7 +362,6 @@ function loadSim(id) {
         ctx.fillText("Microscopic View", bubbleX, bubbleY - r - 5);
 
         // --- BOTTOM PANEL: GRAPH ---
-        // Moved down to start at y=300 to clear the simulation area
         let gy = 300; let gh = 250; let gx = 60; let gw = 600;
         
         ctx.fillStyle = "white"; ctx.fillRect(0, 270, 700, 330);
@@ -365,7 +377,6 @@ function loadSim(id) {
         ctx.beginPath();
         ctx.strokeStyle = "#c0392b"; ctx.lineWidth=3;
         let maxFa = 100; let maxFric = state.maxFriction; 
-        
         state.graphData.forEach((p, i) => {
             let plotX = gx + (p.x / maxFa) * gw;
             let plotY = (gy + gh) - (p.y / maxFric) * gh;
@@ -373,7 +384,6 @@ function loadSim(id) {
         });
         ctx.stroke();
         
-        // Dot
         if(state.graphData.length > 0) {
             let last = state.graphData[state.graphData.length-1];
             let dotX = gx + (last.x / maxFa) * gw;
