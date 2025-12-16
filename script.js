@@ -54,15 +54,18 @@ function loadSim(id) {
 // ===============================================
 
 // ===============================================
-    // === UNIT 2.4: STATIC VS KINETIC FRICTION (FINAL v7) ===
+    // === UNIT 2.4: STATIC VS KINETIC FRICTION (FINAL v9) ===
     // ===============================================
     function setup_2_4() {
+        // Resize canvas to fit vertical vectors
+        canvas.height = 550; 
+
         document.getElementById('sim-title').innerText = "2.4 Static vs. Kinetic Friction";
         document.getElementById('sim-desc').innerHTML = `
             <h3>The Friction "Hump"</h3>
-            <p><b>Static Friction</b> (<span class="var">f<sub>s</sub></span>) matches the Applied Force up to a limit.
-            <br><b>Kinetic Friction</b> (<span class="var">f<sub>k</sub></span>) takes over during motion.
-            <br><i><b>Challenge:</b> Slowly increase force. Can you predict the exact value where it slips?</i></p>`;
+            <p><b>Static Friction</b> (<span class="var">f<sub>s</sub></span>) matches Applied Force. Increasing Mass/&mu;<sub>s</sub> raises the <i>maximum limit</i>.
+            <br><b>Kinetic Friction</b> (<span class="var">f<sub>k</sub></span>) is constant (<span class="var">&mu;<sub>k</sub>F<sub>N</sub></span>). Increasing Mass/&mu;<sub>k</sub> increases this force.
+            <br><i><b>Challenge:</b> Set Mass to 10kg. How much force is needed to break it loose?</i></p>`;
 
         document.getElementById('sim-controls').innerHTML = `
             <div class="control-group">
@@ -90,9 +93,9 @@ function loadSim(id) {
                 </div>
             </div>
 
-            <div style="margin-top:15px; padding:10px; background:#fff; border:1px solid #ddd; border-radius:4px; font-family:'Times New Roman', serif;">
-                <div id="eq-x" style="margin-bottom:8px; height:30px; display:flex; align-items:center;"></div>
-                <div id="eq-y" style="height:30px; display:flex; align-items:center;"></div>
+            <div style="margin-top:15px; padding:15px; background:#fff; border:1px solid #ddd; border-radius:4px; font-family:'Times New Roman', serif;">
+                <div id="eq-x" style="margin-bottom:12px; height:35px; display:flex; align-items:center; font-size:1.1em;"></div>
+                <div id="eq-y" style="height:35px; display:flex; align-items:center; font-size:1.1em;"></div>
             </div>
 
             <div style="margin-top:10px; padding:10px; background:#f8f9fa; border-radius:4px; font-size: 0.9em;">
@@ -140,24 +143,27 @@ function loadSim(id) {
         let Fnet = 0;
         let status = "static";
         
+        // --- PHYSICS STATE MACHINE ---
         if (Math.abs(state.v) < 0.001) {
-            // STATIC
+            // STATIC REGION
             if (state.Fa <= fs_max) {
-                friction = state.Fa;
+                friction = state.Fa; // Static friction matches Applied Force
                 Fnet = 0;
                 state.v = 0;
                 status = "static";
                 document.getElementById('out-stat').innerText = "Static (Stuck)";
                 document.getElementById('out-stat').style.color = "#c0392b";
             } else {
+                // BREAKS LOOSE
                 state.v = 0.01; 
-                friction = fk;
+                friction = fk; // Immediately switch to Kinetic
                 status = "kinetic";
             }
         } else {
-            // KINETIC
-            friction = fk;
+            // KINETIC REGION
+            friction = fk; // Kinetic Friction is Constant
             status = "kinetic";
+            
             if (state.Fa < fk) Fnet = state.Fa - fk;
             else Fnet = state.Fa - fk;
             
@@ -173,32 +179,36 @@ function loadSim(id) {
 
         document.getElementById('out-ff').innerText = friction.toFixed(1);
         
-        // --- DYNAMIC EQUATION BUILDER ---
-        // Helper to map value to font size (min 14px, max 26px)
+        // --- EQUATION BUILDER ---
+        // Scale Factor: 14px base + (val/100 * 20px). Max 34px.
         let getFs = (val, max) => {
-            let s = 14 + (Math.abs(val) / max) * 12; 
-            if(s > 28) s = 28;
+            let s = 14 + (Math.abs(val) / max) * 20; 
+            if(s > 34) s = 34;
             return s + "px";
         };
 
-        // Added &nbsp; for spacing as requested
         let sizeFa = getFs(state.Fa, 100);
         let sizeFf = getFs(friction, 100);
         
-        let htmlX = `&Sigma;F<sub>x</sub> =&nbsp;&nbsp; 
-            <span style="font-size:${sizeFa}; font-weight:bold; color:black; transition:0.1s;">F<sub>app</sub></span> 
-            &nbsp;&minus;&nbsp; 
-            <span style="font-size:${sizeFf}; font-weight:bold; color:#c0392b; transition:0.1s;">f</span> 
-            &nbsp;=&nbsp; ${Fnet.toFixed(1)} N`;
+        // Dynamic Variable Name
+        let fricVar = (status === 'static') ? "f<sub>s</sub>" : "f<sub>k</sub>";
+        
+        // Equation X
+        let htmlX = `&Sigma;F<sub>x</sub> =&nbsp;&nbsp;&nbsp; 
+            <span style="font-size:${sizeFa}; font-weight:bold; color:black; transition: font-size 0.1s;">F<sub>app</sub></span> 
+            &nbsp;&nbsp;&minus;&nbsp;&nbsp; 
+            <span style="font-size:${sizeFf}; font-weight:bold; color:#c0392b; transition: font-size 0.1s;">${fricVar}</span> 
+            &nbsp;&nbsp;=&nbsp;&nbsp; ${Fnet.toFixed(1)} N`;
             
         document.getElementById('eq-x').innerHTML = htmlX;
 
-        let sizeFy = getFs(state.m, 10); 
-        let htmlY = `&Sigma;F<sub>y</sub> =&nbsp;&nbsp; 
-            <span style="font-size:${sizeFy}; font-weight:bold; color:blue; transition:0.1s;">F<sub>N</sub></span> 
-            &nbsp;&minus;&nbsp; 
-            <span style="font-size:${sizeFy}; font-weight:bold; color:green; transition:0.1s;">F<sub>g</sub></span> 
-            &nbsp;=&nbsp; 0`;
+        // Equation Y
+        let sizeFy = getFs(state.m, 10); // Scales with Mass
+        let htmlY = `&Sigma;F<sub>y</sub> =&nbsp;&nbsp;&nbsp; 
+            <span style="font-size:${sizeFy}; font-weight:bold; color:blue; transition: font-size 0.1s;">F<sub>N</sub></span> 
+            &nbsp;&nbsp;&minus;&nbsp;&nbsp; 
+            <span style="font-size:${sizeFy}; font-weight:bold; color:green; transition: font-size 0.1s;">F<sub>g</sub></span> 
+            &nbsp;&nbsp;=&nbsp;&nbsp; 0`;
             
         document.getElementById('eq-y').innerHTML = htmlY;
 
@@ -214,14 +224,13 @@ function loadSim(id) {
     }
 
     function draw_2_4(fVal, Fn, status) {
-        ctx.clearRect(0,0,700,450);
+        ctx.clearRect(0,0,700,550); // Clear taller canvas
         
         // --- VISUALS ---
-        // MOVED FLOOR UP to y=140 to make room for Gravity Vector
-        let floorY = 140; 
+        let floorY = 160; 
         
         ctx.fillStyle = "#ecf0f1"; ctx.fillRect(0,0,700,200); 
-        ctx.fillStyle = "#bdc3c7"; ctx.fillRect(0,floorY,700,60); // Thicker floor
+        ctx.fillStyle = "#bdc3c7"; ctx.fillRect(0,floorY,700,60); 
         
         let drawX = 150 + (state.x % 400); 
         let size = 30 + state.m * 4; 
@@ -237,8 +246,8 @@ function loadSim(id) {
         let cx = drawX + size/2;
         let cy = by + size/2;
         
-        // 1. Gravity (mg)
-        let vectorScale = 0.6; // Slightly larger now that we have room
+        // 1. Gravity (mg) - Scaling adjusted for height
+        let vectorScale = 0.6; 
         let fgLen = (state.m * 9.8) * vectorScale; 
         drawVector(cx, cy + size/2, 0, fgLen, "green"); 
         ctx.fillStyle="black"; ctx.fillText("Fg", cx+5, cy + size/2 + fgLen + 10);
@@ -292,16 +301,16 @@ function loadSim(id) {
         ctx.fillText("Microscopic View", bubbleX, bubbleY - r - 5);
 
         // --- GRAPH ---
-        let gy = 230; let gh = 200; let gx = 60; let gw = 600;
-        ctx.fillStyle = "white"; ctx.fillRect(0, 200, 700, 250);
+        let gy = 260; let gh = 230; let gx = 60; let gw = 600;
+        ctx.fillStyle = "white"; ctx.fillRect(0, 220, 700, 330);
         ctx.strokeStyle = "#ccc"; ctx.lineWidth=1; ctx.strokeRect(gx, gy, gw, gh);
         
         ctx.fillStyle = "#2c3e50"; ctx.font = "bold 14px Sans-Serif"; ctx.textAlign = "center";
-        ctx.fillText("Friction Force vs. Applied Force", 350, 220);
+        ctx.fillText("Friction Force vs. Applied Force", 350, 245);
         
         ctx.font = "italic 13px Serif";
-        ctx.fillText("Applied Force (0 - 100N)", 350, 445);
-        ctx.save(); ctx.translate(20, 330); ctx.rotate(-Math.PI/2); ctx.fillText("Friction (0 - 100N)", 0, 0); ctx.restore();
+        ctx.fillText("Applied Force (0 - 100N)", 350, 510);
+        ctx.save(); ctx.translate(20, 380); ctx.rotate(-Math.PI/2); ctx.fillText("Friction (0 - 100N)", 0, 0); ctx.restore();
 
         // Plot
         ctx.beginPath();
