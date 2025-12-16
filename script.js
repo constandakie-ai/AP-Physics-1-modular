@@ -54,7 +54,7 @@ function loadSim(id) {
 // ===============================================
 
 // ===============================================
-    // === UNIT 2.4: STATIC VS KINETIC FRICTION (FINAL v14 - STOP LOGIC) ===
+    // === UNIT 2.4: STATIC VS KINETIC FRICTION (FINAL v15 - ANTI-JITTER) ===
     // ===============================================
     function setup_2_4() {
         // Resize canvas to fit vertical vectors and graph (Protected setting)
@@ -124,7 +124,6 @@ function loadSim(id) {
             timeScale: document.querySelector('input[name="spd"]:checked').value,
             maxFriction: 100 
         };
-        // Reset label UI
         document.getElementById('v-m').innerText = state.m.toFixed(1);
         document.getElementById('v-mus').innerText = state.mu_s.toFixed(2);
         document.getElementById('v-muk').innerText = state.mu_k.toFixed(2);
@@ -179,13 +178,20 @@ function loadSim(id) {
             state.v += a * dt; 
             state.x += state.v * dt;
             
-            // THE STOP TRAP:
-            // If we were moving but now velocity is negative (moved backwards),
-            // it means friction stopped us. Snap to 0.
+            // === THE FIX: STOP TRAP & RE-EVALUATE ===
             if (state.v <= 0) {
                 state.v = 0;
-                // In the next frame, the "if (Math.abs < 0.001)" check will pass,
-                // converting us back to Static Mode.
+                // We stopped! Immediately check if we should STICK.
+                if (state.Fa <= fs_max) {
+                    // YES: We are stuck. Force Static State NOW (before draw).
+                    status = "static";
+                    friction = state.Fa; // Snap friction down to match Fa
+                    Fnet = 0;            // Net force becomes 0
+                    document.getElementById('out-stat').innerText = "Static (Stuck)";
+                    document.getElementById('out-stat').style.color = "#c0392b";
+                }
+                // If Fa > fs_max, we remain "Kinetic" because we will accelerate again next frame.
+                // This correct physics ("stick-slip"), but the visual jitter is minimized.
             }
         }
 
@@ -201,10 +207,12 @@ function loadSim(id) {
         let sizeFa = getFs(state.Fa, 100);
         let sizeFf = getFs(friction, 100);
         
+        // Dynamic Variable Name
         let fricVar = (status === 'static') ? "f<sub>s</sub>" : "f<sub>k</sub>";
+        // Helper style for subscripts
         const subStyle = 'font-size:0.75em; vertical-align:-0.25em;';
 
-        // Equation X
+        // Equation X (Sigma F_x)
         let htmlX = `&Sigma;<i>F</i><span style="${subStyle}">x</span> &nbsp;=&nbsp;&nbsp; 
             <span style="font-size:${sizeFa}; font-weight:bold; color:black; transition: font-size 0.1s;">F<sub>app</sub></span> 
             &nbsp;&nbsp;&minus;&nbsp;&nbsp; 
@@ -213,7 +221,7 @@ function loadSim(id) {
             
         document.getElementById('eq-x').innerHTML = htmlX;
 
-        // Equation Y
+        // Equation Y (Sigma F_y)
         let sizeFy = getFs(state.m, 10); 
         let htmlY = `&Sigma;<i>F</i><span style="${subStyle}">y</span> &nbsp;=&nbsp;&nbsp; 
             <span style="font-size:${sizeFy}; font-weight:bold; color:blue; transition: font-size 0.1s;">F<sub>n</sub></span> 
@@ -258,6 +266,7 @@ function loadSim(id) {
         let cy = by + size/2;
         let vectorScale = 0.6; 
         
+        // Label Helper
         function drawLabel(main, sub, x, y, color) {
             ctx.fillStyle = color;
             ctx.font = "bold 14px serif";
