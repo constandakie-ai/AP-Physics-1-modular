@@ -54,7 +54,7 @@ function loadSim(id) {
 // ===============================================
 
 // ===============================================
-    // === UNIT 2.4: STATIC VS KINETIC FRICTION (FINAL v19 - IMPOSSIBLE ZONE) ===
+    // === UNIT 2.4: STATIC VS KINETIC FRICTION (FINAL v21 - LAYOUT FIX) ===
     // ===============================================
     function setup_2_4() {
         // Resize canvas to fit vertical vectors and graph (Protected setting)
@@ -291,8 +291,10 @@ function loadSim(id) {
             drawLabel("f", labelChar, labelX, labelY, "black");
         }
 
-        // --- MICROSCOPIC VIEW ---
-        let bubbleX = 550; let bubbleY = 70; let r = 45;
+        // --- MICROSCOPIC VIEW (MOVED TO LEFT) ---
+        let bubbleX = 100; // Left Side
+        let bubbleY = 80;  
+        let r = 45;
         ctx.strokeStyle = "#7f8c8d"; ctx.lineWidth=1; ctx.setLineDash([2,2]);
         ctx.beginPath(); ctx.moveTo(bubbleX, bubbleY + r); ctx.lineTo(drawX + size/2, floorY); ctx.stroke();
         ctx.setLineDash([]);
@@ -315,25 +317,28 @@ function loadSim(id) {
         
         ctx.fillStyle = "white"; ctx.fillRect(0, 260, 700, 340);
         
-        // 0. DRAW IMPOSSIBLE ZONE (Triangle above y=x)
-        // Vertices: Bottom-Left (gx, gy+gh) -> Top-Left (gx, gy) -> Top-Right (gx+gw, gy) [If max=max]
-        // But our limits are 100 on X and 100 on Y. So diagonal is perfectly corner to corner.
+        // 0. DRAW IMPOSSIBLE ZONE
         ctx.beginPath();
         ctx.moveTo(gx, gy + gh); // Origin (0,0)
         ctx.lineTo(gx, gy);      // Top Left (0, 100)
-        ctx.lineTo(gx + gw, gy); // Top Right (100, 100) -- Wait, y=x hits (100,100).
-        // The Impossible region is F_friction > F_app. So Y > X.
-        // That is the triangle defined by (0,0), (0,100), (100,100).
+        ctx.lineTo(gx + gw, gy); // Top Right (100, 100)
         ctx.closePath();
-        ctx.fillStyle = "rgba(127, 140, 141, 0.15)"; // Light Grey
+        ctx.fillStyle = "rgba(127, 140, 141, 0.15)"; 
         ctx.fill();
         
         // Label for Impossible Zone
         ctx.save();
-        ctx.translate(gx + 120, gy + 120);
-        ctx.rotate(-Math.PI / 4);
-        ctx.fillStyle = "#95a5a6"; ctx.font = "bold 14px sans-serif";
+        ctx.translate(gx + gw/3, gy + gh/2.5);
+        ctx.rotate(-Math.PI / 4); 
+        ctx.textAlign = "center";
+        ctx.fillStyle = "rgba(127, 140, 141, 0.8)"; 
+        
+        ctx.font = "bold 14px sans-serif";
         ctx.fillText("Impossible Region", 0, 0);
+        
+        ctx.font = "italic 12px sans-serif";
+        ctx.fillText("(static)", 0, 15); 
+
         ctx.restore();
 
         // Axes
