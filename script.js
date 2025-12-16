@@ -54,7 +54,7 @@ function loadSim(id) {
 // ===============================================
 
 // ===============================================
-    // === UNIT 2.4: STATIC VS KINETIC FRICTION (FINAL v18) ===
+    // === UNIT 2.4: STATIC VS KINETIC FRICTION (FINAL v19 - IMPOSSIBLE ZONE) ===
     // ===============================================
     function setup_2_4() {
         // Resize canvas to fit vertical vectors and graph (Protected setting)
@@ -65,7 +65,7 @@ function loadSim(id) {
             <h3>The Friction "Hump"</h3>
             <p><b>Static Friction</b> (<span class="var">f<sub>s</sub></span>) matches Applied Force. Increasing Mass/&mu;<sub>s</sub> raises the <i>maximum limit</i>.
             <br><b>Kinetic Friction</b> (<span class="var">f<sub>k</sub></span>) is constant (<span class="var">&mu;<sub>k</sub>F<sub>n</sub></span>).
-            <br><i><b>Tip:</b> Watch the Green Line on the graph move when you change &mu;<sub>k</sub>!</i></p>`;
+            <br><i><b>Note:</b> The <span style="color:#7f8c8d; font-weight:bold;">Grey Zone</span> on the graph is impossible because friction cannot exceed the applied force while stationary.</i></p>`;
 
         document.getElementById('sim-controls').innerHTML = `
             <div class="control-group">
@@ -267,24 +267,21 @@ function loadSim(id) {
             ctx.fillText(sub, x + mw, y + 5);
         }
 
-        // 1. Gravity
+        // Vectors
         let fgLen = (state.m * 9.8) * vectorScale; 
         drawVector(cx, cy + size/2, 0, fgLen, "green"); 
         drawLabel("F", "g", cx+5, cy + size/2 + fgLen + 10, "black");
 
-        // 2. Normal
         let fnLen = fgLen; 
         drawVector(cx, cy - size/2, 0, -fnLen, "blue");
         drawLabel("F", "n", cx+5, cy - size/2 - fnLen - 5, "black");
 
-        // 3. Applied
         if(state.Fa > 0) {
             let faLen = state.Fa * 1.5; 
             drawVector(cx + size/2, cy, faLen, 0, "black");
             drawLabel("F", "app", cx + size/2 + faLen + 10, cy+4, "black");
         }
 
-        // 4. Friction
         if(fVal > 0) {
             let fLen = fVal * 1.5;
             drawVector(cx - size/2, cy, -fLen, 0, "red");
@@ -317,6 +314,29 @@ function loadSim(id) {
         let gy = 280; let gh = 250; let gx = 60; let gw = 600;
         
         ctx.fillStyle = "white"; ctx.fillRect(0, 260, 700, 340);
+        
+        // 0. DRAW IMPOSSIBLE ZONE (Triangle above y=x)
+        // Vertices: Bottom-Left (gx, gy+gh) -> Top-Left (gx, gy) -> Top-Right (gx+gw, gy) [If max=max]
+        // But our limits are 100 on X and 100 on Y. So diagonal is perfectly corner to corner.
+        ctx.beginPath();
+        ctx.moveTo(gx, gy + gh); // Origin (0,0)
+        ctx.lineTo(gx, gy);      // Top Left (0, 100)
+        ctx.lineTo(gx + gw, gy); // Top Right (100, 100) -- Wait, y=x hits (100,100).
+        // The Impossible region is F_friction > F_app. So Y > X.
+        // That is the triangle defined by (0,0), (0,100), (100,100).
+        ctx.closePath();
+        ctx.fillStyle = "rgba(127, 140, 141, 0.15)"; // Light Grey
+        ctx.fill();
+        
+        // Label for Impossible Zone
+        ctx.save();
+        ctx.translate(gx + 120, gy + 120);
+        ctx.rotate(-Math.PI / 4);
+        ctx.fillStyle = "#95a5a6"; ctx.font = "bold 14px sans-serif";
+        ctx.fillText("Impossible Region", 0, 0);
+        ctx.restore();
+
+        // Axes
         ctx.strokeStyle = "#ccc"; ctx.lineWidth=1; ctx.strokeRect(gx, gy, gw, gh);
         
         ctx.fillStyle = "#2c3e50"; ctx.font = "bold 14px Sans-Serif"; ctx.textAlign = "center";
@@ -326,16 +346,15 @@ function loadSim(id) {
         ctx.fillText("Applied Force (0 - 100N)", 350, 550);
         ctx.save(); ctx.translate(20, 400); ctx.rotate(-Math.PI/2); ctx.fillText("Friction (0 - 100N)", 0, 0); ctx.restore();
 
-        // 1. Draw Kinetic Level Line (Green Dashed)
+        // 1. Kinetic Level Line
         let maxFric = state.maxFriction; 
         let fkY = (gy + gh) - (fk / maxFric) * gh;
         ctx.strokeStyle = "#27ae60"; ctx.setLineDash([5,5]); ctx.lineWidth=2;
         ctx.beginPath(); ctx.moveTo(gx, fkY); ctx.lineTo(gx+gw, fkY); ctx.stroke();
         ctx.fillStyle = "#27ae60"; ctx.textAlign="right"; ctx.font="12px sans-serif";
-        // UPDATED LABEL:
         ctx.fillText("Kinetic Level (" + fk.toFixed(1) + "N)", gx + gw - 5, fkY - 5);
 
-        // 2. Draw Static Max Line (Grey Dashed)
+        // 2. Static Max Line
         let fsY = (gy + gh) - (fs_max / maxFric) * gh;
         ctx.strokeStyle = "#95a5a6"; ctx.setLineDash([5,5]); ctx.lineWidth=1;
         ctx.beginPath(); ctx.moveTo(gx, fsY); ctx.lineTo(gx+gw, fsY); ctx.stroke();
