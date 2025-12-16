@@ -54,35 +54,39 @@ function loadSim(id) {
 // ===============================================
 
 // ===============================================
-    // === UNIT 2.4: STATIC VS KINETIC FRICTION (FINAL v9) ===
+    // === UNIT 2.4: STATIC VS KINETIC FRICTION (FINAL v10) ===
     // ===============================================
     function setup_2_4() {
-        // Resize canvas to fit vertical vectors
-        canvas.height = 550; 
+        // Resize canvas to fit vertical vectors and graph
+        canvas.height = 600; 
 
         document.getElementById('sim-title').innerText = "2.4 Static vs. Kinetic Friction";
         document.getElementById('sim-desc').innerHTML = `
             <h3>The Friction "Hump"</h3>
             <p><b>Static Friction</b> (<span class="var">f<sub>s</sub></span>) matches Applied Force. Increasing Mass/&mu;<sub>s</sub> raises the <i>maximum limit</i>.
-            <br><b>Kinetic Friction</b> (<span class="var">f<sub>k</sub></span>) is constant (<span class="var">&mu;<sub>k</sub>F<sub>N</sub></span>). Increasing Mass/&mu;<sub>k</sub> increases this force.
-            <br><i><b>Challenge:</b> Set Mass to 10kg. How much force is needed to break it loose?</i></p>`;
+            <br><b>Kinetic Friction</b> (<span class="var">f<sub>k</sub></span>) is constant (<span class="var">&mu;<sub>k</sub>F<sub>N</sub></span>).
+            <br><i><b>Tip:</b> Try adjusting the Kinetic Coefficient while the block is sliding!</i></p>`;
 
         document.getElementById('sim-controls').innerHTML = `
             <div class="control-group">
                 <label>Block Mass (<i class="var">m</i>): <span id="v-m">5.0</span> kg</label>
-                <input type="range" id="in-m" min="1.0" max="10.0" step="0.5" value="5.0" oninput="reset_2_4()">
+                <input type="range" id="in-m" min="1.0" max="10.0" step="0.5" value="5.0" 
+                    oninput="state.m=parseFloat(this.value); document.getElementById('v-m').innerText=state.m.toFixed(1);">
             </div>
             <div class="control-group">
                 <label>Static Coeff (<i class="var">&mu;<sub>s</sub></i>): <span id="v-mus">0.6</span></label>
-                <input type="range" id="in-mus" min="0.1" max="1.0" step="0.05" value="0.6" oninput="reset_2_4()">
+                <input type="range" id="in-mus" min="0.1" max="1.0" step="0.05" value="0.6" 
+                    oninput="state.mu_s=parseFloat(this.value); document.getElementById('v-mus').innerText=state.mu_s.toFixed(2);">
             </div>
             <div class="control-group">
                 <label>Kinetic Coeff (<i class="var">&mu;<sub>k</sub></i>): <span id="v-muk">0.4</span></label>
-                <input type="range" id="in-muk" min="0.1" max="1.0" step="0.05" value="0.4" oninput="reset_2_4()">
+                <input type="range" id="in-muk" min="0.1" max="1.0" step="0.05" value="0.4" 
+                    oninput="state.mu_k=parseFloat(this.value); document.getElementById('v-muk').innerText=state.mu_k.toFixed(2);">
             </div>
             <div class="control-group">
                 <label>Applied Force (<i class="var">F<sub>app</sub></i>): <span id="v-fa">0</span> N</label>
-                <input type="range" id="in-fa" min="0" max="100" value="0" step="0.5" oninput="state.Fa=parseFloat(this.value);">
+                <input type="range" id="in-fa" min="0" max="100" value="0" step="0.5" 
+                    oninput="state.Fa=parseFloat(this.value);">
             </div>
             
             <div class="control-group" style="margin-top:10px;">
@@ -109,7 +113,7 @@ function loadSim(id) {
 
     function reset_2_4() {
         state = {
-            Fa: 0, 
+            Fa: parseFloat(document.getElementById('in-fa').value), 
             m: parseFloat(document.getElementById('in-m').value), 
             mu_s: parseFloat(document.getElementById('in-mus').value), 
             mu_k: parseFloat(document.getElementById('in-muk').value),
@@ -120,8 +124,7 @@ function loadSim(id) {
             timeScale: document.querySelector('input[name="spd"]:checked').value,
             maxFriction: 100 
         };
-        // Reset slider UI
-        document.getElementById('in-fa').value = 0;
+        // Reset label UI in case they were changed
         document.getElementById('v-m').innerText = state.m.toFixed(1);
         document.getElementById('v-mus').innerText = state.mu_s.toFixed(2);
         document.getElementById('v-muk').innerText = state.mu_k.toFixed(2);
@@ -147,7 +150,7 @@ function loadSim(id) {
         if (Math.abs(state.v) < 0.001) {
             // STATIC REGION
             if (state.Fa <= fs_max) {
-                friction = state.Fa; // Static friction matches Applied Force
+                friction = state.Fa; 
                 Fnet = 0;
                 state.v = 0;
                 status = "static";
@@ -156,12 +159,12 @@ function loadSim(id) {
             } else {
                 // BREAKS LOOSE
                 state.v = 0.01; 
-                friction = fk; // Immediately switch to Kinetic
+                friction = fk; 
                 status = "kinetic";
             }
         } else {
             // KINETIC REGION
-            friction = fk; // Kinetic Friction is Constant
+            friction = fk; // This now updates LIVE if mu_k changes
             status = "kinetic";
             
             if (state.Fa < fk) Fnet = state.Fa - fk;
@@ -180,7 +183,6 @@ function loadSim(id) {
         document.getElementById('out-ff').innerText = friction.toFixed(1);
         
         // --- EQUATION BUILDER ---
-        // Scale Factor: 14px base + (val/100 * 20px). Max 34px.
         let getFs = (val, max) => {
             let s = 14 + (Math.abs(val) / max) * 20; 
             if(s > 34) s = 34;
@@ -190,7 +192,6 @@ function loadSim(id) {
         let sizeFa = getFs(state.Fa, 100);
         let sizeFf = getFs(friction, 100);
         
-        // Dynamic Variable Name
         let fricVar = (status === 'static') ? "f<sub>s</sub>" : "f<sub>k</sub>";
         
         // Equation X
@@ -203,7 +204,7 @@ function loadSim(id) {
         document.getElementById('eq-x').innerHTML = htmlX;
 
         // Equation Y
-        let sizeFy = getFs(state.m, 10); // Scales with Mass
+        let sizeFy = getFs(state.m, 10); 
         let htmlY = `&Sigma;F<sub>y</sub> =&nbsp;&nbsp;&nbsp; 
             <span style="font-size:${sizeFy}; font-weight:bold; color:blue; transition: font-size 0.1s;">F<sub>N</sub></span> 
             &nbsp;&nbsp;&minus;&nbsp;&nbsp; 
@@ -212,11 +213,17 @@ function loadSim(id) {
             
         document.getElementById('eq-y').innerHTML = htmlY;
 
-
         // Graphing
-        if(state.Fa !== state.lastFa) {
-             state.graphData.push({x: state.Fa, y: friction});
-             state.lastFa = state.Fa;
+        // Note: Changing mu_k mid-flight will cause the graph line to jump. This is expected and correct!
+        if(state.Fa !== state.lastFa || status === 'kinetic') {
+            // We plot points if Force changes OR if we are sliding (to catch mu_k changes)
+            // But to keep graph clean, we usually plot Fa vs Ff. 
+            // If Fa is constant but Ff changes (due to mu_k slider), we should update.
+            // Simplified: Just push if Fa changed for the curve.
+             if(state.Fa !== state.lastFa) {
+                 state.graphData.push({x: state.Fa, y: friction});
+                 state.lastFa = state.Fa;
+             }
         }
         
         draw_2_4(friction, Fn, status);
@@ -224,7 +231,7 @@ function loadSim(id) {
     }
 
     function draw_2_4(fVal, Fn, status) {
-        ctx.clearRect(0,0,700,550); // Clear taller canvas
+        ctx.clearRect(0,0,700,600); // Clear taller canvas
         
         // --- VISUALS ---
         let floorY = 160; 
@@ -246,25 +253,21 @@ function loadSim(id) {
         let cx = drawX + size/2;
         let cy = by + size/2;
         
-        // 1. Gravity (mg) - Scaling adjusted for height
         let vectorScale = 0.6; 
         let fgLen = (state.m * 9.8) * vectorScale; 
         drawVector(cx, cy + size/2, 0, fgLen, "green"); 
         ctx.fillStyle="black"; ctx.fillText("Fg", cx+5, cy + size/2 + fgLen + 10);
 
-        // 2. Normal (Fn)
         let fnLen = fgLen; 
         drawVector(cx, cy - size/2, 0, -fnLen, "blue");
         ctx.fillText("Fn", cx+5, cy - size/2 - fnLen - 5);
 
-        // 3. Applied (Fa)
         if(state.Fa > 0) {
             let faLen = state.Fa * 1.5; 
             drawVector(cx + size/2, cy, faLen, 0, "black");
             ctx.fillText("Fapp", cx + size/2 + faLen + 20, cy+4);
         }
 
-        // 4. Friction (f)
         if(fVal > 0) {
             let fLen = fVal * 1.5;
             drawVector(cx - size/2, cy, -fLen, 0, "red");
@@ -300,17 +303,21 @@ function loadSim(id) {
         ctx.fillStyle = "#555"; ctx.font="10px sans-serif";
         ctx.fillText("Microscopic View", bubbleX, bubbleY - r - 5);
 
-        // --- GRAPH ---
-        let gy = 260; let gh = 230; let gx = 60; let gw = 600;
-        ctx.fillStyle = "white"; ctx.fillRect(0, 220, 700, 330);
+        // --- GRAPH (Pushed down to y=280) ---
+        let gy = 280; 
+        let gh = 250; 
+        let gx = 60; let gw = 600;
+        
+        // Clear background for graph area
+        ctx.fillStyle = "white"; ctx.fillRect(0, 240, 700, 360);
         ctx.strokeStyle = "#ccc"; ctx.lineWidth=1; ctx.strokeRect(gx, gy, gw, gh);
         
         ctx.fillStyle = "#2c3e50"; ctx.font = "bold 14px Sans-Serif"; ctx.textAlign = "center";
-        ctx.fillText("Friction Force vs. Applied Force", 350, 245);
+        ctx.fillText("Friction Force vs. Applied Force", 350, 265);
         
         ctx.font = "italic 13px Serif";
-        ctx.fillText("Applied Force (0 - 100N)", 350, 510);
-        ctx.save(); ctx.translate(20, 380); ctx.rotate(-Math.PI/2); ctx.fillText("Friction (0 - 100N)", 0, 0); ctx.restore();
+        ctx.fillText("Applied Force (0 - 100N)", 350, 550);
+        ctx.save(); ctx.translate(20, 400); ctx.rotate(-Math.PI/2); ctx.fillText("Friction (0 - 100N)", 0, 0); ctx.restore();
 
         // Plot
         ctx.beginPath();
