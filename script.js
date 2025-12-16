@@ -54,7 +54,7 @@ function loadSim(id) {
 // ===============================================
 
 // ===============================================
-    // === UNIT 2.4: STATIC VS KINETIC FRICTION (FINAL v10) ===
+    // === UNIT 2.4: STATIC VS KINETIC FRICTION (FINAL v11) ===
     // ===============================================
     function setup_2_4() {
         // Resize canvas to fit vertical vectors and graph
@@ -164,7 +164,7 @@ function loadSim(id) {
             }
         } else {
             // KINETIC REGION
-            friction = fk; // This now updates LIVE if mu_k changes
+            friction = fk; 
             status = "kinetic";
             
             if (state.Fa < fk) Fnet = state.Fa - fk;
@@ -214,12 +214,7 @@ function loadSim(id) {
         document.getElementById('eq-y').innerHTML = htmlY;
 
         // Graphing
-        // Note: Changing mu_k mid-flight will cause the graph line to jump. This is expected and correct!
         if(state.Fa !== state.lastFa || status === 'kinetic') {
-            // We plot points if Force changes OR if we are sliding (to catch mu_k changes)
-            // But to keep graph clean, we usually plot Fa vs Ff. 
-            // If Fa is constant but Ff changes (due to mu_k slider), we should update.
-            // Simplified: Just push if Fa changed for the curve.
              if(state.Fa !== state.lastFa) {
                  state.graphData.push({x: state.Fa, y: friction});
                  state.lastFa = state.Fa;
@@ -237,7 +232,8 @@ function loadSim(id) {
         let floorY = 160; 
         
         ctx.fillStyle = "#ecf0f1"; ctx.fillRect(0,0,700,200); 
-        ctx.fillStyle = "#bdc3c7"; ctx.fillRect(0,floorY,700,60); 
+        // EXTENDED FLOOR HEIGHT: Now 100px deep (y=160 to y=260)
+        ctx.fillStyle = "#bdc3c7"; ctx.fillRect(0,floorY,700,100); 
         
         let drawX = 150 + (state.x % 400); 
         let size = 30 + state.m * 4; 
@@ -303,17 +299,18 @@ function loadSim(id) {
         ctx.fillStyle = "#555"; ctx.font="10px sans-serif";
         ctx.fillText("Microscopic View", bubbleX, bubbleY - r - 5);
 
-        // --- GRAPH (Pushed down to y=280) ---
+        // --- GRAPH (Adjusted for floor overlap) ---
+        // Floor ends at 260. We start graph bg at 260.
         let gy = 280; 
         let gh = 250; 
         let gx = 60; let gw = 600;
         
-        // Clear background for graph area
-        ctx.fillStyle = "white"; ctx.fillRect(0, 240, 700, 360);
+        // Graph Background Fill
+        ctx.fillStyle = "white"; ctx.fillRect(0, 260, 700, 340);
         ctx.strokeStyle = "#ccc"; ctx.lineWidth=1; ctx.strokeRect(gx, gy, gw, gh);
         
         ctx.fillStyle = "#2c3e50"; ctx.font = "bold 14px Sans-Serif"; ctx.textAlign = "center";
-        ctx.fillText("Friction Force vs. Applied Force", 350, 265);
+        ctx.fillText("Friction Force vs. Applied Force", 350, 275);
         
         ctx.font = "italic 13px Serif";
         ctx.fillText("Applied Force (0 - 100N)", 350, 550);
