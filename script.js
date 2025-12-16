@@ -54,7 +54,7 @@ function loadSim(id) {
 // ===============================================
 
 // ===============================================
-    // === UNIT 2.4: STATIC VS KINETIC FRICTION (FINAL v23 - BUBBLE RAISED) ===
+    // === UNIT 2.4: STATIC VS KINETIC FRICTION (FINAL v24 - MODES & LOCKS) ===
     // ===============================================
     function setup_2_4() {
         // Resize canvas to fit vertical vectors and graph (Protected setting)
@@ -68,19 +68,29 @@ function loadSim(id) {
             <br><i><b>Note:</b> The <span style="color:#7f8c8d; font-weight:bold;">Grey Zone</span> on the graph is impossible because friction cannot exceed the applied force while stationary.</i></p>`;
 
         document.getElementById('sim-controls').innerHTML = `
+            <div style="background:#eef2f3; padding:10px; border-radius:5px; margin-bottom:15px; border:1px solid #ccc;">
+                <label style="font-weight:bold; margin-right:15px;">Mode:</label>
+                <label style="margin-right:15px; cursor:pointer;">
+                    <input type="radio" name="sim-mode" value="guided" checked onchange="setMode_2_4('guided')"> Guided Lab
+                </label>
+                <label style="cursor:pointer;">
+                    <input type="radio" name="sim-mode" value="challenge" onchange="setMode_2_4('challenge')"> Challenge (Unlocked)
+                </label>
+            </div>
+
             <div class="control-group">
                 <label>Block Mass (<i class="var">m</i>): <span id="v-m">5.0</span> kg</label>
-                <input type="range" id="in-m" min="1.0" max="10.0" step="0.5" value="5.0" 
+                <input type="range" id="in-m" class="phys-slider" min="1.0" max="10.0" step="0.5" value="5.0" 
                     oninput="state.m=parseFloat(this.value); document.getElementById('v-m').innerText=state.m.toFixed(1);">
             </div>
             <div class="control-group">
                 <label>Static Coeff (<i class="var">&mu;<sub>s</sub></i>): <span id="v-mus">0.6</span></label>
-                <input type="range" id="in-mus" min="0.1" max="1.0" step="0.05" value="0.6" 
+                <input type="range" id="in-mus" class="phys-slider" min="0.1" max="1.0" step="0.05" value="0.6" 
                     oninput="state.mu_s=parseFloat(this.value); document.getElementById('v-mus').innerText=state.mu_s.toFixed(2);">
             </div>
             <div class="control-group">
                 <label>Kinetic Coeff (<i class="var">&mu;<sub>k</sub></i>): <span id="v-muk">0.4</span></label>
-                <input type="range" id="in-muk" min="0.1" max="1.0" step="0.05" value="0.4" 
+                <input type="range" id="in-muk" class="phys-slider" min="0.1" max="1.0" step="0.05" value="0.4" 
                     oninput="state.mu_k=parseFloat(this.value); document.getElementById('v-muk').innerText=state.mu_k.toFixed(2);">
             </div>
             <div class="control-group">
@@ -107,8 +117,27 @@ function loadSim(id) {
                 <div>Friction (<i class="var">f</i>): <span id="out-ff">0.0</span> N</div>
             </div>
             <button class="btn btn-red" onclick="reset_2_4()" style="margin-top:15px;">Reset Graph</button>
+            
+            <div id="questions-section" style="margin-top:20px; border-top:2px solid #eee; padding-top:15px;">
+                <h4 style="margin:0 0 10px 0;">Guided Questions</h4>
+                <div style="font-size:0.9rem; color:#444;">
+                    <p>1. Set Mass to 5kg and &mu;<sub>s</sub> to 0.5. Calculate the max static friction (f<sub>s,max</sub> = &mu;<sub>s</sub>F<sub>n</sub>). What force is needed to start moving?</p>
+                    <p>2. Once moving, does increasing the Applied Force change the friction value? Why or why not?</p>
+                    <p>3. <b>Predict:</b> If you increase mass while sliding, what happens to the friction vector?</p>
+                </div>
+            </div>
         `;
         reset_2_4();
+    }
+
+    function setMode_2_4(mode) {
+        state.mode = mode;
+        const qDiv = document.getElementById('questions-section');
+        if(mode === 'challenge') {
+            qDiv.style.display = 'none';
+        } else {
+            qDiv.style.display = 'block';
+        }
     }
 
     function reset_2_4() {
@@ -123,8 +152,12 @@ function loadSim(id) {
             lastFa: -1,
             lastFriction: -1, 
             timeScale: document.querySelector('input[name="spd"]:checked').value,
-            maxFriction: 100 
+            maxFriction: 100,
+            mode: document.querySelector('input[name="sim-mode"]:checked').value
         };
+        // Initial visibility check
+        setMode_2_4(state.mode);
+        
         document.getElementById('v-m').innerText = state.m.toFixed(1);
         document.getElementById('v-mus').innerText = state.mu_s.toFixed(2);
         document.getElementById('v-muk').innerText = state.mu_k.toFixed(2);
@@ -191,6 +224,17 @@ function loadSim(id) {
                 }
             }
         }
+        
+        // --- SLIDER LOCKING LOGIC ---
+        // If Guided Mode AND moving, lock physics properties.
+        // If Challenge Mode, always unlocked.
+        let sliders = document.querySelectorAll('.phys-slider');
+        let shouldLock = (state.mode === 'guided' && Math.abs(state.v) > 0.001);
+        
+        sliders.forEach(s => {
+            s.disabled = shouldLock;
+            s.style.opacity = shouldLock ? "0.5" : "1.0";
+        });
 
         document.getElementById('out-ff').innerText = friction.toFixed(1);
         
@@ -291,9 +335,9 @@ function loadSim(id) {
             drawLabel("f", labelChar, labelX, labelY, "black");
         }
 
-        // --- MICROSCOPIC VIEW (RAISED) ---
+        // --- MICROSCOPIC VIEW (LEFT/RAISED) ---
         let bubbleX = 100; 
-        let bubbleY = 60;  // RAISED TO 60 (Text is at y=10)
+        let bubbleY = 60;  
         let r = 45;
         ctx.strokeStyle = "#7f8c8d"; ctx.lineWidth=1; ctx.setLineDash([2,2]);
         ctx.beginPath(); ctx.moveTo(bubbleX, bubbleY + r); ctx.lineTo(drawX + size/2, floorY); ctx.stroke();
