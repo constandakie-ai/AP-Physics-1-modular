@@ -55,7 +55,7 @@ function loadSim(id) {
 // ===============================================
 
 // ===============================================
-    // === UNIT 2.4: STATIC VS KINETIC FRICTION (FINAL v26 - AP MASTERY) ===
+    // === UNIT 2.4: STATIC VS KINETIC FRICTION (FINAL v27 - FEEDBACK RESTORED) ===
     // ===============================================
     function setup_2_4() {
         canvas.height = 600; 
@@ -147,7 +147,6 @@ function loadSim(id) {
             qDiv.style.display = 'none';
         } else {
             qDiv.style.display = 'block';
-            // Only reset to 0 if we haven't started. If they are on Q4, keep them there.
             if(state.level < 0) state.level = 0;
             renderQuestions_2_4();
         }
@@ -155,26 +154,13 @@ function loadSim(id) {
     }
 
     function updateLocks_2_4() {
-        // LOCKS:
-        // Level 0: Lock Mass, Mus, Muk
-        // Level 1: Lock Mus, Muk (Unlock Mass)
-        // Level 2+: Unlock All (Full Version / Mastery)
-        
         let lockM = (state.level < 1);
         let lockMu = (state.level < 2);
         
-        // In challenge mode OR if Mastery levels reached (Level 3+), physics is unlocked
         if(state.mode === 'challenge' || state.level >= 2) { lockM = false; lockMu = false; }
 
         let setLock = (id, locked) => {
             let el = document.getElementById(id);
-            // "Smart Lock" - only lock if moving? 
-            // The prompt implied the controls unlock permanently after Q3.
-            // But we keep the "Lock while moving" safety for guided mode, 
-            // UNLESS we are in the Mastery Levels (3+), where we need to brake.
-            
-            // Logic: If in guided mode levels 0-2, we enforce strict locks.
-            // If in Mastery (3+), we unlock everything so they can do the hard questions.
             el.disabled = locked;
             el.style.opacity = locked ? "0.4" : "1.0";
             el.style.cursor = locked ? "not-allowed" : "pointer";
@@ -209,22 +195,18 @@ function loadSim(id) {
         // --- MASTERY LEVELS (3-5) ---
         else if(qIdx === 3) { 
             // Q: Constant Velocity Force
-            // Fapp must equal Fk.
             let target = state.mu_k * state.m * 9.8;
             if(Math.abs(val - target) < tol) correct = true;
         }
         else if(qIdx === 4) { 
             // Q: Braking Acceleration (Negative)
-            // User sets Fapp < Fk. a = (Fapp - Fk)/m
             let fk = state.mu_k * state.m * 9.8;
             let target = (state.Fa - fk) / state.m;
-            // It must be moving for this to be valid
             if(Math.abs(state.v) < 0.01) feedback = " (Get it moving first!)";
             else if(Math.abs(val - target) < 0.2) correct = true;
         }
         else if(qIdx === 5) { 
             // Q: The Static Trap
-            // If stationary, Friction = Fapp. NOT mu*Fn.
             if(Math.abs(state.v) > 0.01) feedback = " (Stop the block first!)";
             else {
                 let fsMax = state.mu_s * state.m * 9.8;
@@ -241,7 +223,8 @@ function loadSim(id) {
 
         let fbEl = document.getElementById('fb-'+qIdx);
         if(correct) {
-            fbEl.innerHTML = "<span style='color:green; font-weight:bold;'>Correct!</span>";
+            // RESTORED FEEDBACK:
+            fbEl.innerHTML = "<span style='color:green; font-weight:bold;'>Correct! Unlocking next step...</span>";
             
             // Level Up Logic
             if(state.level === qIdx) state.level++;
@@ -250,7 +233,7 @@ function loadSim(id) {
                 document.getElementById('mastery-badge').style.display = 'block';
             }
             
-            setTimeout(renderQuestions_2_4, 1000); 
+            setTimeout(renderQuestions_2_4, 1500); 
             updateLocks_2_4();
         } else {
             fbEl.innerHTML = "<span style='color:red'>Try again." + feedback + "</span>";
@@ -419,8 +402,6 @@ function loadSim(id) {
         
         // --- DYNAMIC LOCKING ---
         let sliders = document.querySelectorAll('.phys-slider');
-        // Lock only if in Guided Mode (Levels 0-2) AND moving.
-        // Once we hit Level 3 (Mastery), we unlock so they can do braking experiments.
         let shouldLock = (state.mode === 'guided' && state.level < 3 && Math.abs(state.v) > 0.001);
         
         sliders.forEach(s => {
