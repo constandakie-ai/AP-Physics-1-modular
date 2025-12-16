@@ -46,6 +46,7 @@ function loadSim(id) {
         // case '1.1': setup_1_1(); break;
         
         case '2.4': setup_2_4(); break;
+        case '5.1': setup_5_1(); break;
     }
 }
 
