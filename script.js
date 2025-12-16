@@ -54,7 +54,7 @@ function loadSim(id) {
 // ===============================================
 
 // ===============================================
-    // === UNIT 2.4: STATIC VS KINETIC FRICTION (FINAL v12) ===
+    // === UNIT 2.4: STATIC VS KINETIC FRICTION (FINAL v13) ===
     // ===============================================
     function setup_2_4() {
         // Resize canvas to fit vertical vectors and graph (Protected setting)
@@ -194,9 +194,12 @@ function loadSim(id) {
         
         let fricVar = (status === 'static') ? "f<sub>s</sub>" : "f<sub>k</sub>";
         
+        // Subscript style helper
+        const subStyle = 'font-size:0.75em; vertical-align:-0.25em;';
+
         // Equation X (Sigma F_x)
-        // Added spaces around subscript and equals sign
-        let htmlX = `&Sigma;F<sub>x</sub> &nbsp;=&nbsp;&nbsp; 
+        // Using explicit vertical-align to force "x" down
+        let htmlX = `&Sigma;<i>F</i><span style="${subStyle}">x</span> &nbsp;=&nbsp;&nbsp; 
             <span style="font-size:${sizeFa}; font-weight:bold; color:black; transition: font-size 0.1s;">F<sub>app</sub></span> 
             &nbsp;&nbsp;&minus;&nbsp;&nbsp; 
             <span style="font-size:${sizeFf}; font-weight:bold; color:#c0392b; transition: font-size 0.1s;">${fricVar}</span> 
@@ -205,9 +208,8 @@ function loadSim(id) {
         document.getElementById('eq-x').innerHTML = htmlX;
 
         // Equation Y (Sigma F_y)
-        // Changed F_N to F_n (lowercase)
         let sizeFy = getFs(state.m, 10); 
-        let htmlY = `&Sigma;F<sub>y</sub> &nbsp;=&nbsp;&nbsp; 
+        let htmlY = `&Sigma;<i>F</i><span style="${subStyle}">y</span> &nbsp;=&nbsp;&nbsp; 
             <span style="font-size:${sizeFy}; font-weight:bold; color:blue; transition: font-size 0.1s;">F<sub>n</sub></span> 
             &nbsp;&nbsp;&minus;&nbsp;&nbsp; 
             <span style="font-size:${sizeFy}; font-weight:bold; color:green; transition: font-size 0.1s;">F<sub>g</sub></span> 
@@ -265,20 +267,17 @@ function loadSim(id) {
         // 1. Gravity (Fg)
         let fgLen = (state.m * 9.8) * vectorScale; 
         drawVector(cx, cy + size/2, 0, fgLen, "green"); 
-        // Label F_g
         drawLabel("F", "g", cx+5, cy + size/2 + fgLen + 10, "black");
 
         // 2. Normal (Fn)
         let fnLen = fgLen; 
         drawVector(cx, cy - size/2, 0, -fnLen, "blue");
-        // Label F_n
         drawLabel("F", "n", cx+5, cy - size/2 - fnLen - 5, "black");
 
         // 3. Applied (Fapp)
         if(state.Fa > 0) {
             let faLen = state.Fa * 1.5; 
             drawVector(cx + size/2, cy, faLen, 0, "black");
-            // Label F_app
             drawLabel("F", "app", cx + size/2 + faLen + 10, cy+4, "black");
         }
 
@@ -289,7 +288,6 @@ function loadSim(id) {
             let labelChar = (status === 'static') ? "s" : "k";
             let labelX = cx - size/2 - fLen - 20;
             let labelY = cy+4;
-            // Label f_s or f_k
             drawLabel("f", labelChar, labelX, labelY, "black");
         }
 
