@@ -54,17 +54,17 @@ function loadSim(id) {
 // ===============================================
 
 // ===============================================
-    // === UNIT 2.4: STATIC VS KINETIC FRICTION (FINAL v11) ===
+    // === UNIT 2.4: STATIC VS KINETIC FRICTION (FINAL v12) ===
     // ===============================================
     function setup_2_4() {
-        // Resize canvas to fit vertical vectors and graph
+        // Resize canvas to fit vertical vectors and graph (Protected setting)
         canvas.height = 600; 
 
         document.getElementById('sim-title').innerText = "2.4 Static vs. Kinetic Friction";
         document.getElementById('sim-desc').innerHTML = `
             <h3>The Friction "Hump"</h3>
             <p><b>Static Friction</b> (<span class="var">f<sub>s</sub></span>) matches Applied Force. Increasing Mass/&mu;<sub>s</sub> raises the <i>maximum limit</i>.
-            <br><b>Kinetic Friction</b> (<span class="var">f<sub>k</sub></span>) is constant (<span class="var">&mu;<sub>k</sub>F<sub>N</sub></span>).
+            <br><b>Kinetic Friction</b> (<span class="var">f<sub>k</sub></span>) is constant (<span class="var">&mu;<sub>k</sub>F<sub>n</sub></span>).
             <br><i><b>Tip:</b> Try adjusting the Kinetic Coefficient while the block is sliding!</i></p>`;
 
         document.getElementById('sim-controls').innerHTML = `
@@ -124,7 +124,7 @@ function loadSim(id) {
             timeScale: document.querySelector('input[name="spd"]:checked').value,
             maxFriction: 100 
         };
-        // Reset label UI in case they were changed
+        // Reset label UI
         document.getElementById('v-m').innerText = state.m.toFixed(1);
         document.getElementById('v-mus').innerText = state.mu_s.toFixed(2);
         document.getElementById('v-muk').innerText = state.mu_k.toFixed(2);
@@ -194,8 +194,9 @@ function loadSim(id) {
         
         let fricVar = (status === 'static') ? "f<sub>s</sub>" : "f<sub>k</sub>";
         
-        // Equation X
-        let htmlX = `&Sigma;F<sub>x</sub> =&nbsp;&nbsp;&nbsp; 
+        // Equation X (Sigma F_x)
+        // Added spaces around subscript and equals sign
+        let htmlX = `&Sigma;F<sub>x</sub> &nbsp;=&nbsp;&nbsp; 
             <span style="font-size:${sizeFa}; font-weight:bold; color:black; transition: font-size 0.1s;">F<sub>app</sub></span> 
             &nbsp;&nbsp;&minus;&nbsp;&nbsp; 
             <span style="font-size:${sizeFf}; font-weight:bold; color:#c0392b; transition: font-size 0.1s;">${fricVar}</span> 
@@ -203,10 +204,11 @@ function loadSim(id) {
             
         document.getElementById('eq-x').innerHTML = htmlX;
 
-        // Equation Y
+        // Equation Y (Sigma F_y)
+        // Changed F_N to F_n (lowercase)
         let sizeFy = getFs(state.m, 10); 
-        let htmlY = `&Sigma;F<sub>y</sub> =&nbsp;&nbsp;&nbsp; 
-            <span style="font-size:${sizeFy}; font-weight:bold; color:blue; transition: font-size 0.1s;">F<sub>N</sub></span> 
+        let htmlY = `&Sigma;F<sub>y</sub> &nbsp;=&nbsp;&nbsp; 
+            <span style="font-size:${sizeFy}; font-weight:bold; color:blue; transition: font-size 0.1s;">F<sub>n</sub></span> 
             &nbsp;&nbsp;&minus;&nbsp;&nbsp; 
             <span style="font-size:${sizeFy}; font-weight:bold; color:green; transition: font-size 0.1s;">F<sub>g</sub></span> 
             &nbsp;&nbsp;=&nbsp;&nbsp; 0`;
@@ -232,7 +234,7 @@ function loadSim(id) {
         let floorY = 160; 
         
         ctx.fillStyle = "#ecf0f1"; ctx.fillRect(0,0,700,200); 
-        // EXTENDED FLOOR HEIGHT: Now 100px deep (y=160 to y=260)
+        // Floor Background (100px deep)
         ctx.fillStyle = "#bdc3c7"; ctx.fillRect(0,floorY,700,100); 
         
         let drawX = 150 + (state.x % 400); 
@@ -248,32 +250,47 @@ function loadSim(id) {
         // --- VECTORS ---
         let cx = drawX + size/2;
         let cy = by + size/2;
-        
         let vectorScale = 0.6; 
+        
+        // Helper to draw text with subscript
+        function drawLabel(main, sub, x, y, color) {
+            ctx.fillStyle = color;
+            ctx.font = "bold 14px serif";
+            let mw = ctx.measureText(main).width;
+            ctx.fillText(main, x, y);
+            ctx.font = "bold 10px serif";
+            ctx.fillText(sub, x + mw, y + 5);
+        }
+
+        // 1. Gravity (Fg)
         let fgLen = (state.m * 9.8) * vectorScale; 
         drawVector(cx, cy + size/2, 0, fgLen, "green"); 
-        ctx.fillStyle="black"; ctx.fillText("Fg", cx+5, cy + size/2 + fgLen + 10);
+        // Label F_g
+        drawLabel("F", "g", cx+5, cy + size/2 + fgLen + 10, "black");
 
+        // 2. Normal (Fn)
         let fnLen = fgLen; 
         drawVector(cx, cy - size/2, 0, -fnLen, "blue");
-        ctx.fillText("Fn", cx+5, cy - size/2 - fnLen - 5);
+        // Label F_n
+        drawLabel("F", "n", cx+5, cy - size/2 - fnLen - 5, "black");
 
+        // 3. Applied (Fapp)
         if(state.Fa > 0) {
             let faLen = state.Fa * 1.5; 
             drawVector(cx + size/2, cy, faLen, 0, "black");
-            ctx.fillText("Fapp", cx + size/2 + faLen + 20, cy+4);
+            // Label F_app
+            drawLabel("F", "app", cx + size/2 + faLen + 10, cy+4, "black");
         }
 
+        // 4. Friction (f)
         if(fVal > 0) {
             let fLen = fVal * 1.5;
             drawVector(cx - size/2, cy, -fLen, 0, "red");
             let labelChar = (status === 'static') ? "s" : "k";
-            let labelX = cx - size/2 - fLen - 15;
+            let labelX = cx - size/2 - fLen - 20;
             let labelY = cy+4;
-            ctx.font = "italic 14px serif";
-            ctx.fillText("f", labelX, labelY);
-            ctx.font = "10px serif";
-            ctx.fillText(labelChar, labelX+6, labelY+5); 
+            // Label f_s or f_k
+            drawLabel("f", labelChar, labelX, labelY, "black");
         }
 
         // --- MICROSCOPIC VIEW ---
@@ -287,7 +304,6 @@ function loadSim(id) {
         
         ctx.save();
         ctx.beginPath(); ctx.rect(bubbleX-r, bubbleY-r, 2*r, 2*r); ctx.clip(); 
-        
         ctx.strokeStyle = "#e67e22"; ctx.lineWidth=3; 
         let offset = (state.x * 20) % 20; 
         ctx.beginPath();
@@ -299,13 +315,9 @@ function loadSim(id) {
         ctx.fillStyle = "#555"; ctx.font="10px sans-serif";
         ctx.fillText("Microscopic View", bubbleX, bubbleY - r - 5);
 
-        // --- GRAPH (Adjusted for floor overlap) ---
-        // Floor ends at 260. We start graph bg at 260.
-        let gy = 280; 
-        let gh = 250; 
-        let gx = 60; let gw = 600;
+        // --- GRAPH ---
+        let gy = 280; let gh = 250; let gx = 60; let gw = 600;
         
-        // Graph Background Fill
         ctx.fillStyle = "white"; ctx.fillRect(0, 260, 700, 340);
         ctx.strokeStyle = "#ccc"; ctx.lineWidth=1; ctx.strokeRect(gx, gy, gw, gh);
         
