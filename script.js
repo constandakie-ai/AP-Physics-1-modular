@@ -54,7 +54,7 @@ function loadSim(id) {
 // ===============================================
 
 // ===============================================
-    // === UNIT 2.4: STATIC VS KINETIC FRICTION (FINAL v12) ===
+    // === UNIT 2.4: STATIC VS KINETIC FRICTION (FINAL v14 - STOP LOGIC) ===
     // ===============================================
     function setup_2_4() {
         // Resize canvas to fit vertical vectors and graph (Protected setting)
@@ -65,7 +65,7 @@ function loadSim(id) {
             <h3>The Friction "Hump"</h3>
             <p><b>Static Friction</b> (<span class="var">f<sub>s</sub></span>) matches Applied Force. Increasing Mass/&mu;<sub>s</sub> raises the <i>maximum limit</i>.
             <br><b>Kinetic Friction</b> (<span class="var">f<sub>k</sub></span>) is constant (<span class="var">&mu;<sub>k</sub>F<sub>n</sub></span>).
-            <br><i><b>Tip:</b> Try adjusting the Kinetic Coefficient while the block is sliding!</i></p>`;
+            <br><i><b>Tip:</b> Increase &mu;<sub>k</sub> while sliding to "slam on the brakes"!</i></p>`;
 
         document.getElementById('sim-controls').innerHTML = `
             <div class="control-group">
@@ -148,7 +148,7 @@ function loadSim(id) {
         
         // --- PHYSICS STATE MACHINE ---
         if (Math.abs(state.v) < 0.001) {
-            // STATIC REGION
+            // === STATIC REGION ===
             if (state.Fa <= fs_max) {
                 friction = state.Fa; 
                 Fnet = 0;
@@ -163,12 +163,13 @@ function loadSim(id) {
                 status = "kinetic";
             }
         } else {
-            // KINETIC REGION
+            // === KINETIC REGION ===
             friction = fk; 
             status = "kinetic";
             
-            if (state.Fa < fk) Fnet = state.Fa - fk;
-            else Fnet = state.Fa - fk;
+            // Calculate Force Balance
+            if (state.Fa < fk) Fnet = state.Fa - fk; // Braking
+            else Fnet = state.Fa - fk; // Accelerating
             
             document.getElementById('out-stat').innerText = "Kinetic (Sliding)";
             document.getElementById('out-stat').style.color = "#27ae60";
@@ -177,7 +178,15 @@ function loadSim(id) {
             let dt = 0.1 * state.timeScale; 
             state.v += a * dt; 
             state.x += state.v * dt;
-            if (state.v < 0) state.v = 0;
+            
+            // THE STOP TRAP:
+            // If we were moving but now velocity is negative (moved backwards),
+            // it means friction stopped us. Snap to 0.
+            if (state.v <= 0) {
+                state.v = 0;
+                // In the next frame, the "if (Math.abs < 0.001)" check will pass,
+                // converting us back to Static Mode.
+            }
         }
 
         document.getElementById('out-ff').innerText = friction.toFixed(1);
@@ -193,10 +202,10 @@ function loadSim(id) {
         let sizeFf = getFs(friction, 100);
         
         let fricVar = (status === 'static') ? "f<sub>s</sub>" : "f<sub>k</sub>";
-        
-        // Equation X (Sigma F_x)
-        // Added spaces around subscript and equals sign
-        let htmlX = `&Sigma;F<sub>x</sub> &nbsp;=&nbsp;&nbsp; 
+        const subStyle = 'font-size:0.75em; vertical-align:-0.25em;';
+
+        // Equation X
+        let htmlX = `&Sigma;<i>F</i><span style="${subStyle}">x</span> &nbsp;=&nbsp;&nbsp; 
             <span style="font-size:${sizeFa}; font-weight:bold; color:black; transition: font-size 0.1s;">F<sub>app</sub></span> 
             &nbsp;&nbsp;&minus;&nbsp;&nbsp; 
             <span style="font-size:${sizeFf}; font-weight:bold; color:#c0392b; transition: font-size 0.1s;">${fricVar}</span> 
@@ -204,10 +213,9 @@ function loadSim(id) {
             
         document.getElementById('eq-x').innerHTML = htmlX;
 
-        // Equation Y (Sigma F_y)
-        // Changed F_N to F_n (lowercase)
+        // Equation Y
         let sizeFy = getFs(state.m, 10); 
-        let htmlY = `&Sigma;F<sub>y</sub> &nbsp;=&nbsp;&nbsp; 
+        let htmlY = `&Sigma;<i>F</i><span style="${subStyle}">y</span> &nbsp;=&nbsp;&nbsp; 
             <span style="font-size:${sizeFy}; font-weight:bold; color:blue; transition: font-size 0.1s;">F<sub>n</sub></span> 
             &nbsp;&nbsp;&minus;&nbsp;&nbsp; 
             <span style="font-size:${sizeFy}; font-weight:bold; color:green; transition: font-size 0.1s;">F<sub>g</sub></span> 
@@ -232,10 +240,8 @@ function loadSim(id) {
         
         // --- VISUALS ---
         let floorY = 160; 
-        
         ctx.fillStyle = "#ecf0f1"; ctx.fillRect(0,0,700,200); 
-        // Floor Background (100px deep)
-        ctx.fillStyle = "#bdc3c7"; ctx.fillRect(0,floorY,700,100); 
+        ctx.fillStyle = "#bdc3c7"; ctx.fillRect(0,floorY,700,100); // Deep floor
         
         let drawX = 150 + (state.x % 400); 
         let size = 30 + state.m * 4; 
@@ -252,7 +258,6 @@ function loadSim(id) {
         let cy = by + size/2;
         let vectorScale = 0.6; 
         
-        // Helper to draw text with subscript
         function drawLabel(main, sub, x, y, color) {
             ctx.fillStyle = color;
             ctx.font = "bold 14px serif";
@@ -265,20 +270,17 @@ function loadSim(id) {
         // 1. Gravity (Fg)
         let fgLen = (state.m * 9.8) * vectorScale; 
         drawVector(cx, cy + size/2, 0, fgLen, "green"); 
-        // Label F_g
         drawLabel("F", "g", cx+5, cy + size/2 + fgLen + 10, "black");
 
         // 2. Normal (Fn)
         let fnLen = fgLen; 
         drawVector(cx, cy - size/2, 0, -fnLen, "blue");
-        // Label F_n
         drawLabel("F", "n", cx+5, cy - size/2 - fnLen - 5, "black");
 
         // 3. Applied (Fapp)
         if(state.Fa > 0) {
             let faLen = state.Fa * 1.5; 
             drawVector(cx + size/2, cy, faLen, 0, "black");
-            // Label F_app
             drawLabel("F", "app", cx + size/2 + faLen + 10, cy+4, "black");
         }
 
@@ -289,7 +291,6 @@ function loadSim(id) {
             let labelChar = (status === 'static') ? "s" : "k";
             let labelX = cx - size/2 - fLen - 20;
             let labelY = cy+4;
-            // Label f_s or f_k
             drawLabel("f", labelChar, labelX, labelY, "black");
         }
 
