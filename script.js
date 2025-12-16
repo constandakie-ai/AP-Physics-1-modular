@@ -54,7 +54,7 @@ function loadSim(id) {
 // ===============================================
 
 // ===============================================
-    // === UNIT 2.4: STATIC VS KINETIC FRICTION (FINAL v21 - LAYOUT FIX) ===
+    // === UNIT 2.4: STATIC VS KINETIC FRICTION (FINAL v22 - TEXT ROTATION FIX) ===
     // ===============================================
     function setup_2_4() {
         // Resize canvas to fit vertical vectors and graph (Protected setting)
@@ -291,8 +291,8 @@ function loadSim(id) {
             drawLabel("f", labelChar, labelX, labelY, "black");
         }
 
-        // --- MICROSCOPIC VIEW (MOVED TO LEFT) ---
-        let bubbleX = 100; // Left Side
+        // --- MICROSCOPIC VIEW (LEFT) ---
+        let bubbleX = 100; 
         let bubbleY = 80;  
         let r = 45;
         ctx.strokeStyle = "#7f8c8d"; ctx.lineWidth=1; ctx.setLineDash([2,2]);
@@ -319,17 +319,21 @@ function loadSim(id) {
         
         // 0. DRAW IMPOSSIBLE ZONE
         ctx.beginPath();
-        ctx.moveTo(gx, gy + gh); // Origin (0,0)
-        ctx.lineTo(gx, gy);      // Top Left (0, 100)
-        ctx.lineTo(gx + gw, gy); // Top Right (100, 100)
+        ctx.moveTo(gx, gy + gh); 
+        ctx.lineTo(gx, gy);      
+        ctx.lineTo(gx + gw, gy); 
         ctx.closePath();
         ctx.fillStyle = "rgba(127, 140, 141, 0.15)"; 
         ctx.fill();
         
-        // Label for Impossible Zone
+        // Label for Impossible Zone (FIXED ROTATION)
         ctx.save();
-        ctx.translate(gx + gw/3, gy + gh/2.5);
-        ctx.rotate(-Math.PI / 4); 
+        ctx.translate(gx + gw/4, gy + gh/2.2); // Position text nicely in the zone
+        
+        // CALCULATE ANGLE: atan2(-height, width) gives exact slope of diagonal
+        let angle = Math.atan2(-gh, gw);
+        ctx.rotate(angle); 
+        
         ctx.textAlign = "center";
         ctx.fillStyle = "rgba(127, 140, 141, 0.8)"; 
         
