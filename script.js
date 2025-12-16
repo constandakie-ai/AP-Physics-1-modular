@@ -54,7 +54,7 @@ function loadSim(id) {
 // ===============================================
 
 // ===============================================
-    // === UNIT 2.4: STATIC VS KINETIC FRICTION (FINAL v17 - GRAPH UPGRADE) ===
+    // === UNIT 2.4: STATIC VS KINETIC FRICTION (FINAL v18) ===
     // ===============================================
     function setup_2_4() {
         // Resize canvas to fit vertical vectors and graph (Protected setting)
@@ -121,7 +121,7 @@ function loadSim(id) {
             graphData: [],
             running: true,
             lastFa: -1,
-            lastFriction: -1, // Track friction changes for graphing vertical lines
+            lastFriction: -1, 
             timeScale: document.querySelector('input[name="spd"]:checked').value,
             maxFriction: 100 
         };
@@ -224,16 +224,14 @@ function loadSim(id) {
             &nbsp;&nbsp;=&nbsp;&nbsp; 0`;
         document.getElementById('eq-y').innerHTML = htmlY;
 
-        // --- GRAPH DATA PUSH ---
-        // We push a point if F_app changes OR if Friction Force changes significantly 
-        // (This captures the vertical snap lines)
+        // Graphing Data Push
         if(state.Fa !== state.lastFa || Math.abs(friction - state.lastFriction) > 0.1) {
              state.graphData.push({x: state.Fa, y: friction});
              state.lastFa = state.Fa;
              state.lastFriction = friction;
         }
         
-        draw_2_4(friction, Fn, status, fk, fs_max); // Pass fk and fs_max to draw function
+        draw_2_4(friction, Fn, status, fk, fs_max);
         animId = requestAnimationFrame(loop_2_4);
     }
 
@@ -334,7 +332,8 @@ function loadSim(id) {
         ctx.strokeStyle = "#27ae60"; ctx.setLineDash([5,5]); ctx.lineWidth=2;
         ctx.beginPath(); ctx.moveTo(gx, fkY); ctx.lineTo(gx+gw, fkY); ctx.stroke();
         ctx.fillStyle = "#27ae60"; ctx.textAlign="right"; ctx.font="12px sans-serif";
-        ctx.fillText("Kinetic Level", gx + gw - 5, fkY - 5);
+        // UPDATED LABEL:
+        ctx.fillText("Kinetic Level (" + fk.toFixed(1) + "N)", gx + gw - 5, fkY - 5);
 
         // 2. Draw Static Max Line (Grey Dashed)
         let fsY = (gy + gh) - (fs_max / maxFric) * gh;
