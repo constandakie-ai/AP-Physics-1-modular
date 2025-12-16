@@ -54,18 +54,16 @@ function loadSim(id) {
 // ===============================================
 
 // ===============================================
-    // === UNIT 2.4: STATIC VS KINETIC FRICTION (FINAL v24 - MODES & LOCKS) ===
+    // === UNIT 2.4: STATIC VS KINETIC FRICTION (FINAL v25 - GAMIFIED) ===
     // ===============================================
     function setup_2_4() {
-        // Resize canvas to fit vertical vectors and graph (Protected setting)
         canvas.height = 600; 
 
         document.getElementById('sim-title').innerText = "2.4 Static vs. Kinetic Friction";
         document.getElementById('sim-desc').innerHTML = `
             <h3>The Friction "Hump"</h3>
-            <p><b>Static Friction</b> (<span class="var">f<sub>s</sub></span>) matches Applied Force. Increasing Mass/&mu;<sub>s</sub> raises the <i>maximum limit</i>.
-            <br><b>Kinetic Friction</b> (<span class="var">f<sub>k</sub></span>) is constant (<span class="var">&mu;<sub>k</sub>F<sub>n</sub></span>).
-            <br><i><b>Note:</b> The <span style="color:#7f8c8d; font-weight:bold;">Grey Zone</span> on the graph is impossible because friction cannot exceed the applied force while stationary.</i></p>`;
+            <p><b>Static Friction</b> matches Applied Force up to a limit. <b>Kinetic Friction</b> is constant.
+            <br><i><b>Mission:</b> Answer the questions below to unlock the full controls!</i></p>`;
 
         document.getElementById('sim-controls').innerHTML = `
             <div style="background:#eef2f3; padding:10px; border-radius:5px; margin-bottom:15px; border:1px solid #ccc;">
@@ -74,28 +72,28 @@ function loadSim(id) {
                     <input type="radio" name="sim-mode" value="guided" checked onchange="setMode_2_4('guided')"> Guided Lab
                 </label>
                 <label style="cursor:pointer;">
-                    <input type="radio" name="sim-mode" value="challenge" onchange="setMode_2_4('challenge')"> Challenge (Unlocked)
+                    <input type="radio" name="sim-mode" value="challenge" onchange="setMode_2_4('challenge')"> Full Version
                 </label>
             </div>
 
             <div class="control-group">
                 <label>Block Mass (<i class="var">m</i>): <span id="v-m">5.0</span> kg</label>
                 <input type="range" id="in-m" class="phys-slider" min="1.0" max="10.0" step="0.5" value="5.0" 
-                    oninput="state.m=parseFloat(this.value); document.getElementById('v-m').innerText=state.m.toFixed(1);">
+                    oninput="updateState_2_4('m', this.value)">
             </div>
             <div class="control-group">
                 <label>Static Coeff (<i class="var">&mu;<sub>s</sub></i>): <span id="v-mus">0.6</span></label>
                 <input type="range" id="in-mus" class="phys-slider" min="0.1" max="1.0" step="0.05" value="0.6" 
-                    oninput="state.mu_s=parseFloat(this.value); document.getElementById('v-mus').innerText=state.mu_s.toFixed(2);">
+                    oninput="updateState_2_4('mu_s', this.value)">
             </div>
             <div class="control-group">
                 <label>Kinetic Coeff (<i class="var">&mu;<sub>k</sub></i>): <span id="v-muk">0.4</span></label>
                 <input type="range" id="in-muk" class="phys-slider" min="0.1" max="1.0" step="0.05" value="0.4" 
-                    oninput="state.mu_k=parseFloat(this.value); document.getElementById('v-muk').innerText=state.mu_k.toFixed(2);">
+                    oninput="updateState_2_4('mu_k', this.value)">
             </div>
             <div class="control-group">
                 <label>Applied Force (<i class="var">F<sub>app</sub></i>): <span id="v-fa">0</span> N</label>
-                <input type="range" id="in-fa" min="0" max="100" value="0" step="0.5" 
+                <input type="range" id="in-fa" class="phys-slider" min="0" max="100" value="0" step="0.5" 
                     oninput="state.Fa=parseFloat(this.value);">
             </div>
             
@@ -118,16 +116,18 @@ function loadSim(id) {
             </div>
             <button class="btn btn-red" onclick="reset_2_4()" style="margin-top:15px;">Reset Graph</button>
             
-            <div id="questions-section" style="margin-top:20px; border-top:2px solid #eee; padding-top:15px;">
-                <h4 style="margin:0 0 10px 0;">Guided Questions</h4>
-                <div style="font-size:0.9rem; color:#444;">
-                    <p>1. Set Mass to 5kg and &mu;<sub>s</sub> to 0.5. Calculate the max static friction (f<sub>s,max</sub> = &mu;<sub>s</sub>F<sub>n</sub>). What force is needed to start moving?</p>
-                    <p>2. Once moving, does increasing the Applied Force change the friction value? Why or why not?</p>
-                    <p>3. <b>Predict:</b> If you increase mass while sliding, what happens to the friction vector?</p>
+            <div id="questions-section" style="margin-top:20px; border-top:2px solid #eee; padding-top:15px; background:#fafafa; padding:15px; border-radius:5px;">
                 </div>
-            </div>
         `;
         reset_2_4();
+    }
+
+    function updateState_2_4(key, val) {
+        state[key] = parseFloat(val);
+        // Update labels
+        if(key==='m') document.getElementById('v-m').innerText = state.m.toFixed(1);
+        if(key==='mu_s') document.getElementById('v-mus').innerText = state.mu_s.toFixed(2);
+        if(key==='mu_k') document.getElementById('v-muk').innerText = state.mu_k.toFixed(2);
     }
 
     function setMode_2_4(mode) {
@@ -135,8 +135,118 @@ function loadSim(id) {
         const qDiv = document.getElementById('questions-section');
         if(mode === 'challenge') {
             qDiv.style.display = 'none';
+            state.level = 3; // Unlock everything
         } else {
             qDiv.style.display = 'block';
+            state.level = 0; // Reset to level 0
+            renderQuestions_2_4();
+        }
+        updateLocks_2_4();
+    }
+
+    function updateLocks_2_4() {
+        // LOCKING LOGIC:
+        // Level 0: Lock Mass, Mus, Muk
+        // Level 1: Lock Mus, Muk (Unlock Mass)
+        // Level 2: Lock none (Unlock Mus, Muk)
+        // Level 3: All Unlocked
+        
+        let lockM = (state.level < 1);
+        let lockMu = (state.level < 2);
+        
+        if(state.mode === 'challenge') { lockM = false; lockMu = false; }
+
+        let setLock = (id, locked) => {
+            let el = document.getElementById(id);
+            el.disabled = locked;
+            el.style.opacity = locked ? "0.4" : "1.0";
+            el.style.cursor = locked ? "not-allowed" : "pointer";
+        };
+
+        setLock('in-m', lockM);
+        setLock('in-mus', lockMu);
+        setLock('in-muk', lockMu);
+    }
+
+    function checkAnswer_2_4(qIdx) {
+        let val = parseFloat(document.getElementById('ans-'+qIdx).value);
+        let correct = false;
+        let feedback = "";
+        
+        // Tolerance
+        let tol = 0.5;
+
+        if(qIdx === 0) {
+            // Q1: Calc Max Static Friction (Mus * m * 9.8)
+            let target = state.mu_s * state.m * 9.8;
+            if(Math.abs(val - target) < tol) correct = true;
+        } 
+        else if(qIdx === 1) {
+            // Q2: Calc Kinetic Friction (Muk * m * 9.8)
+            let target = state.mu_k * state.m * 9.8;
+            if(Math.abs(val - target) < tol) correct = true;
+        }
+        else if(qIdx === 2) {
+            // Q3: AP Challenge - Calc Acceleration
+            // a = Fnet / m = (Fapp - fk) / m
+            let fk = state.mu_k * state.m * 9.8;
+            let target = (state.Fa - fk) / state.m;
+            // If they are static, a=0
+            if(state.Fa <= state.mu_s * state.m * 9.8) target = 0;
+            
+            if(Math.abs(val - target) < 0.2) correct = true;
+            else feedback = " (Hint: Use Newton's 2nd Law. Is it moving?)";
+        }
+
+        let fbEl = document.getElementById('fb-'+qIdx);
+        if(correct) {
+            fbEl.innerHTML = "<span style='color:green'>Correct! Unlocking next controls...</span>";
+            state.level++;
+            setTimeout(renderQuestions_2_4, 1500); // Delay before showing next level
+            updateLocks_2_4();
+        } else {
+            fbEl.innerHTML = "<span style='color:red'>Incorrect. Try again." + feedback + "</span>";
+        }
+    }
+
+    function renderQuestions_2_4() {
+        let div = document.getElementById('questions-section');
+        if(state.level === 0) {
+            div.innerHTML = `
+                <h4>Level 1: Static Limits</h4>
+                <p>Current Mass: <b>${state.m} kg</b> | &mu;<sub>s</sub>: <b>${state.mu_s}</b></p>
+                <p>Calculate the <b>Maximum Static Friction</b> force possible before it slips.</p>
+                <input type="number" id="ans-0" placeholder="Newtons" style="width:80px; padding:5px;">
+                <button class="btn btn-green" style="width:auto; display:inline-block;" onclick="checkAnswer_2_4(0)">Check</button>
+                <span id="fb-0" style="margin-left:10px; font-weight:bold;"></span>
+                <p style="font-size:0.85em; color:#666;"><i>Reward: Unlock Mass Slider</i></p>
+            `;
+        } else if(state.level === 1) {
+            div.innerHTML = `
+                <h4>Level 2: Kinetic Friction</h4>
+                <p>Current Mass: <b>${state.m} kg</b> | &mu;<sub>k</sub>: <b>${state.mu_k}</b></p>
+                <p>If the block is sliding, what is the constant <b>Kinetic Friction</b> force?</p>
+                <input type="number" id="ans-1" placeholder="Newtons" style="width:80px; padding:5px;">
+                <button class="btn btn-green" style="width:auto; display:inline-block;" onclick="checkAnswer_2_4(1)">Check</button>
+                <span id="fb-1" style="margin-left:10px; font-weight:bold;"></span>
+                <p style="font-size:0.85em; color:#666;"><i>Reward: Unlock All Coefficients</i></p>
+            `;
+        } else if(state.level === 2) {
+            div.innerHTML = `
+                <h4>Level 3: The AP Challenge</h4>
+                <p>Set F<sub>app</sub> to <b>${state.Fa} N</b>.</p>
+                <p>Based on current Mass (${state.m}kg) and &mu;<sub>k</sub> (${state.mu_k}), calculate the <b>Acceleration</b> of the block.</p>
+                <input type="number" id="ans-2" placeholder="m/s²" style="width:80px; padding:5px;">
+                <button class="btn btn-green" style="width:auto; display:inline-block;" onclick="checkAnswer_2_4(2)">Check</button>
+                <span id="fb-2" style="margin-left:10px; font-weight:bold;"></span>
+                <p style="font-size:0.85em; color:#666;"><i>Reward: Full Version Unlocked</i></p>
+            `;
+        } else {
+            div.innerHTML = `
+                <h3 style="color:#27ae60;">Congratulations!</h3>
+                <p>You have mastered the Friction Lab. All controls are now unlocked.</p>
+                <p><b>Challenge Mode Enabled:</b> You can now adjust &mu;<sub>k</sub> while sliding to simulate braking!</p>
+            `;
         }
     }
 
@@ -153,14 +263,13 @@ function loadSim(id) {
             lastFriction: -1, 
             timeScale: document.querySelector('input[name="spd"]:checked').value,
             maxFriction: 100,
-            mode: document.querySelector('input[name="sim-mode"]:checked').value
+            mode: document.querySelector('input[name="sim-mode"]:checked').value,
+            level: 0 
         };
-        // Initial visibility check
-        setMode_2_4(state.mode);
         
-        document.getElementById('v-m').innerText = state.m.toFixed(1);
-        document.getElementById('v-mus').innerText = state.mu_s.toFixed(2);
-        document.getElementById('v-muk').innerText = state.mu_k.toFixed(2);
+        // Initial setup
+        if(state.mode === 'challenge') state.level = 3;
+        setMode_2_4(state.mode);
         
         loop_2_4(); 
     }
@@ -225,16 +334,7 @@ function loadSim(id) {
             }
         }
         
-        // --- SLIDER LOCKING LOGIC ---
-        // If Guided Mode AND moving, lock physics properties.
-        // If Challenge Mode, always unlocked.
-        let sliders = document.querySelectorAll('.phys-slider');
-        let shouldLock = (state.mode === 'guided' && Math.abs(state.v) > 0.001);
-        
-        sliders.forEach(s => {
-            s.disabled = shouldLock;
-            s.style.opacity = shouldLock ? "0.5" : "1.0";
-        });
+        // --- DYNAMIC LOCKING IS HANDLED BY updateLocks_2_4() called on state change ---
 
         document.getElementById('out-ff').innerText = friction.toFixed(1);
         
@@ -335,7 +435,7 @@ function loadSim(id) {
             drawLabel("f", labelChar, labelX, labelY, "black");
         }
 
-        // --- MICROSCOPIC VIEW (LEFT/RAISED) ---
+        // --- MICROSCOPIC VIEW ---
         let bubbleX = 100; 
         let bubbleY = 60;  
         let r = 45;
@@ -370,7 +470,7 @@ function loadSim(id) {
         ctx.fillStyle = "rgba(127, 140, 141, 0.15)"; 
         ctx.fill();
         
-        // Label for Impossible Zone (ROTATED)
+        // Label for Impossible Zone
         ctx.save();
         ctx.translate(gx + gw/4, gy + gh/2.2); 
         let angle = Math.atan2(-gh, gw);
