@@ -54,7 +54,7 @@ function loadSim(id) {
 // ===============================================
 
 // ===============================================
-    // === UNIT 2.4: STATIC VS KINETIC FRICTION (FINAL v15 - ANTI-JITTER) ===
+    // === UNIT 2.4: STATIC VS KINETIC FRICTION (FINAL v16 - PARADOX FIX) ===
     // ===============================================
     function setup_2_4() {
         // Resize canvas to fit vertical vectors and graph (Protected setting)
@@ -148,7 +148,11 @@ function loadSim(id) {
         // --- PHYSICS STATE MACHINE ---
         if (Math.abs(state.v) < 0.001) {
             // === STATIC REGION ===
-            if (state.Fa <= fs_max) {
+            // We stick if Applied Force is less than Static Max OR 
+            // if Kinetic Friction would be strong enough to prevent motion (Paradox Fix)
+            let limit = Math.max(fs_max, fk); 
+            
+            if (state.Fa <= limit) {
                 friction = state.Fa; 
                 Fnet = 0;
                 state.v = 0;
@@ -178,20 +182,20 @@ function loadSim(id) {
             state.v += a * dt; 
             state.x += state.v * dt;
             
-            // === THE FIX: STOP TRAP & RE-EVALUATE ===
+            // === STOP TRAP ===
             if (state.v <= 0) {
                 state.v = 0;
-                // We stopped! Immediately check if we should STICK.
-                if (state.Fa <= fs_max) {
-                    // YES: We are stuck. Force Static State NOW (before draw).
+                // PARADOX FIX:
+                // If we stopped, we check if we should stick.
+                // We stick if Fa <= fs_max (Normal) OR if Fa <= fk (High Kinetic)
+                // This prevents the jitter loop where it moves, hits strong kinetic, stops, slips on weak static, moves...
+                if (state.Fa <= fs_max || state.Fa <= fk) {
                     status = "static";
-                    friction = state.Fa; // Snap friction down to match Fa
-                    Fnet = 0;            // Net force becomes 0
+                    friction = state.Fa; 
+                    Fnet = 0;            
                     document.getElementById('out-stat').innerText = "Static (Stuck)";
                     document.getElementById('out-stat').style.color = "#c0392b";
                 }
-                // If Fa > fs_max, we remain "Kinetic" because we will accelerate again next frame.
-                // This correct physics ("stick-slip"), but the visual jitter is minimized.
             }
         }
 
@@ -207,12 +211,10 @@ function loadSim(id) {
         let sizeFa = getFs(state.Fa, 100);
         let sizeFf = getFs(friction, 100);
         
-        // Dynamic Variable Name
         let fricVar = (status === 'static') ? "f<sub>s</sub>" : "f<sub>k</sub>";
-        // Helper style for subscripts
         const subStyle = 'font-size:0.75em; vertical-align:-0.25em;';
 
-        // Equation X (Sigma F_x)
+        // Equation X
         let htmlX = `&Sigma;<i>F</i><span style="${subStyle}">x</span> &nbsp;=&nbsp;&nbsp; 
             <span style="font-size:${sizeFa}; font-weight:bold; color:black; transition: font-size 0.1s;">F<sub>app</sub></span> 
             &nbsp;&nbsp;&minus;&nbsp;&nbsp; 
@@ -221,7 +223,7 @@ function loadSim(id) {
             
         document.getElementById('eq-x').innerHTML = htmlX;
 
-        // Equation Y (Sigma F_y)
+        // Equation Y
         let sizeFy = getFs(state.m, 10); 
         let htmlY = `&Sigma;<i>F</i><span style="${subStyle}">y</span> &nbsp;=&nbsp;&nbsp; 
             <span style="font-size:${sizeFy}; font-weight:bold; color:blue; transition: font-size 0.1s;">F<sub>n</sub></span> 
@@ -266,7 +268,6 @@ function loadSim(id) {
         let cy = by + size/2;
         let vectorScale = 0.6; 
         
-        // Label Helper
         function drawLabel(main, sub, x, y, color) {
             ctx.fillStyle = color;
             ctx.font = "bold 14px serif";
