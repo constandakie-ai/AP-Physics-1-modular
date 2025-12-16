@@ -620,12 +620,12 @@ function loadSim(id) {
         }
     }
 
-    // ===============================================
-// === UNIT 5.1: 1D COLLISIONS (GOLD STANDARD v1) ===
+// ===============================================
+// === UNIT 5.1: 1D COLLISIONS (GOLD STANDARD v2 - POLISHED) ===
 // ===============================================
 
 function setup_5_1() {
-    canvas.height = 600; // Matching Unit 2.4 height
+    canvas.height = 600; 
 
     document.getElementById('sim-title').innerText = "5.1 Momentum & Impulse (1D Collisions)";
     document.getElementById('sim-desc').innerHTML = `
@@ -676,12 +676,14 @@ function setup_5_1() {
                 oninput="updateState_5_1('e', this.value)">
         </div>
 
-        <div style="margin-top:15px; display:flex; gap:10px;">
+        <div style="margin-top:15px; display:flex; align-items:center; gap:15px;">
             <button class="btn btn-green" onclick="start_5_1()">Run Collision</button>
             <button class="btn btn-red" onclick="reset_5_1()">Reset</button>
-            <div style="margin-left:auto;">
-                <label style="font-weight:normal;"><input type="checkbox" id="show-cm" onclick="state.showCM = this.checked"> Show Center of Mass</label>
-            </div>
+            
+            <label style="font-weight:normal; cursor:pointer; display:flex; align-items:center; white-space:nowrap;">
+                <input type="checkbox" id="show-cm" style="margin-right:5px;" onclick="state.showCM = this.checked; loop_5_1();"> 
+                Show Center of Mass
+            </label>
         </div>
 
         <div style="margin-top:15px; padding:15px; background:#fff; border:1px solid #ddd; border-radius:4px; font-family:'Times New Roman', serif;">
@@ -696,7 +698,7 @@ function setup_5_1() {
 }
 
 function updateState_5_1(key, val) {
-    if(state.running) return; // Prevent editing while running
+    if(state.running) return; 
     state[key] = parseFloat(val);
     
     // Update Labels
@@ -706,14 +708,17 @@ function updateState_5_1(key, val) {
     if(key === 'u2') document.getElementById('v-u2').innerText = state.u2.toFixed(1);
     if(key === 'e') document.getElementById('v-e').innerText = (state.e * 100).toFixed(0);
     
-    // Soft Reset (re-calculate initial positions but don't clear question progress)
+    // Hard sync slider position if updating elasticity programmatically
+    if(key === 'e') document.getElementById('in-e').value = state.e;
+
+    // Soft Reset
     state.v1 = state.u1;
     state.v2 = state.u2;
     state.x1 = 200;
     state.x2 = 500;
     state.collided = false;
     
-    loop_5_1(); // Render update
+    loop_5_1(); 
 }
 
 function setMode_5_1(mode) {
@@ -732,18 +737,18 @@ function setMode_5_1(mode) {
         renderQuestions_5_1();
     }
     updateLocks_5_1();
+    
+    // Ensure elasticity visual sync when switching modes/levels
+    if(state.level === 0 && mode === 'guided') {
+        updateState_5_1('e', 0); // Force 0 visual and state
+    }
 }
 
 function updateLocks_5_1() {
-    // LOCKING LOGIC
-    // Level 0: Inelastic Intro (Locks Elasticity to 0)
-    // Level 1: Explosion (Locks Elasticity 1, V to 0)
-    // Level 2: Mastery (Unlock All)
-    
     let sliders = document.querySelectorAll('.phys-slider');
     let runBtn = document.querySelector('.btn-green');
     
-    let lockAll = state.running; // Always lock while running
+    let lockAll = state.running; 
     
     sliders.forEach(s => {
         s.disabled = lockAll;
@@ -752,22 +757,21 @@ function updateLocks_5_1() {
     runBtn.disabled = lockAll;
     runBtn.style.opacity = lockAll ? "0.5" : "1.0";
 
-    // If not running, apply guided locks
     if(!state.running && state.mode === 'guided') {
         if(state.level === 0) {
-            // Force Inelastic
-            document.getElementById('in-e').disabled = true;
-            document.getElementById('in-e').style.opacity = "0.5";
+            let eSlider = document.getElementById('in-e');
+            eSlider.disabled = true;
+            eSlider.style.opacity = "0.5";
+            // Ensure state matches the lock requirement
             if(state.e !== 0) updateState_5_1('e', 0);
         }
-        // Add more specific locks per level here if desired
     }
 }
 
 function start_5_1() {
     if(!state.running) {
         state.running = true;
-        updateLocks_5_1(); // Lock controls
+        updateLocks_5_1(); 
         loop_5_1();
     }
 }
@@ -786,7 +790,7 @@ function reset_5_1() {
         
         running: false,
         collided: false,
-        showCM: false,
+        showCM: document.getElementById('show-cm').checked,
         
         mode: document.querySelector('input[name="sim-mode"]:checked').value,
         level: 0
@@ -794,7 +798,6 @@ function reset_5_1() {
     state.v1 = state.u1;
     state.v2 = state.u2;
     
-    // Initial UI Setup
     setMode_5_1(state.mode);
     loop_5_1();
 }
@@ -802,24 +805,20 @@ function reset_5_1() {
 function loop_5_1() {
     if(currentSim !== '5.1') return;
 
-    // --- PHYSICS ENGINE ---
     if(state.running) {
-        let dt = 0.05; // Time step
-        let steps = 4; // Sub-steps for collision precision
+        let dt = 0.05; 
+        let steps = 4; 
 
         for(let i=0; i<steps; i++) {
-            // Move
             state.x1 += state.v1 * dt;
             state.x2 += state.v2 * dt;
 
-            // Collision Check
             let dist = state.x2 - state.x1;
             let minDist = state.w; 
             
             if(!state.collided && dist <= minDist) {
                 state.collided = true;
                 
-                // 1D Collision Physics
                 let m1 = state.m1, m2 = state.m2;
                 let u1 = state.v1, u2 = state.v2;
                 let e = state.e;
@@ -830,36 +829,37 @@ function loop_5_1() {
                 state.v1 = v1f;
                 state.v2 = v2f;
 
-                // Anti-Overlap (Teleport apart slightly to prevent stickiness)
                 let overlap = minDist - dist;
                 state.x1 -= overlap/2 + 0.1;
                 state.x2 += overlap/2 + 0.1;
             }
         }
         
-        // Wall boundaries (optional, stops them from vanishing)
-        if(state.x1 < -100 || state.x2 > 800) state.running = false;
+        if(state.x1 < -200 || state.x2 > 900) state.running = false;
         if(!state.running) updateLocks_5_1();
     }
 
-    // --- CALCULATIONS FOR DISPLAY ---
+    // --- CALCULATIONS ---
     let p1 = state.m1 * state.v1;
     let p2 = state.m2 * state.v2;
     let pTotal = p1 + p2;
     
-    // Initial Momentum (for Equation)
     let p1i = state.m1 * state.u1;
     let p2i = state.m2 * state.u2;
     let pTi = p1i + p2i;
 
-    // HTML Equation Updates
-    let subStyle = "vertical-align:-0.25em; font-size:0.7em;";
+    // Helper for math formatting (Parentheses for negatives)
+    let fmtP = (val, col) => {
+        let num = val.toFixed(1);
+        if(val < 0) num = `(${num})`;
+        return `<span style="color:${col}; font-weight:bold;">${num}</span>`;
+    };
+
     document.getElementById('eq-p-init').innerHTML = 
-        `Initial: <span style="color:#2980b9;">${p1i.toFixed(1)}</span> + <span style="color:#c0392b;">${p2i.toFixed(1)}</span> = <b>${pTi.toFixed(1)}</b> kg·m/s`;
+        `Initial: ${fmtP(p1i, '#2980b9')} + ${fmtP(p2i, '#c0392b')} = <b>${pTi.toFixed(1)}</b> kg·m/s`;
     
     document.getElementById('eq-p-final').innerHTML = 
-        `Current: <span style="color:#2980b9;">${p1.toFixed(1)}</span> + <span style="color:#c0392b;">${p2.toFixed(1)}</span> = <b>${pTotal.toFixed(1)}</b> kg·m/s`;
-
+        `Current: ${fmtP(p1, '#2980b9')} + ${fmtP(p2, '#c0392b')} = <b>${pTotal.toFixed(1)}</b> kg·m/s`;
 
     // --- DRAWING ---
     draw_5_1(p1, p2, pTotal);
@@ -872,17 +872,14 @@ function draw_5_1(p1, p2, pTotal) {
     
     // 1. SKY & TRACK
     ctx.fillStyle = "#ecf0f1"; ctx.fillRect(0,0,700,400); 
-    ctx.fillStyle = "#bdc3c7"; ctx.fillRect(0,350,700,50); // Track
+    ctx.fillStyle = "#bdc3c7"; ctx.fillRect(0,350,700,50); 
     
     // 2. CARTS
     let y = 350 - state.h;
-    
-    // Cart 1 (Blue)
     drawCart(state.x1, y, state.w, state.h, "#3498db", "#2980b9", state.m1, state.v1);
-    // Cart 2 (Red)
     drawCart(state.x2, y, state.w, state.h, "#e74c3c", "#c0392b", state.m2, state.v2);
     
-    // 3. CENTER OF MASS (Yellow Diamond)
+    // 3. CENTER OF MASS
     if(state.showCM) {
         let cmX = (state.m1*(state.x1+state.w/2) + state.m2*(state.x2+state.w/2)) / (state.m1+state.m2);
         let cmY = y + state.h/2;
@@ -894,7 +891,7 @@ function draw_5_1(p1, p2, pTotal) {
         ctx.fillStyle = "black"; ctx.font = "10px sans-serif"; ctx.fillText("CM", cmX-8, cmY-15);
     }
 
-    // 4. BAR CHARTS (The "Graph" Area)
+    // 4. BAR CHARTS (Scaled to prevent clipping)
     let chartY = 430; 
     let chartH = 150;
     
@@ -905,44 +902,40 @@ function draw_5_1(p1, p2, pTotal) {
     // Chart Axes
     let midY = chartY + chartH/2;
     ctx.strokeStyle = "#333";
-    ctx.beginPath(); ctx.moveTo(50, midY); ctx.lineTo(650, midY); ctx.stroke(); // Zero line
+    ctx.beginPath(); ctx.moveTo(50, midY); ctx.lineTo(650, midY); ctx.stroke(); 
     
     ctx.fillStyle = "#333"; ctx.font = "bold 14px sans-serif"; ctx.textAlign="center";
     ctx.fillText("Momentum Bar Chart", 350, 420);
     
-    // Draw Bars
-    // Scale: 100px = 40 units of momentum? dynamic scaling
-    let scale = 3; 
+    // Scaling Logic: Max momentum usually ~100 (10kg * 10m/s).
+    // Available height up/down is ~75px. 
+    // Scale = 0.7 keeps it safely inside.
+    let scale = 0.7; 
     
-    drawBar(150, midY, p1, "#2980b9", "p1");
-    drawBar(250, midY, p2, "#c0392b", "p2");
+    drawBar(150, midY, p1, scale, "#2980b9", "p1");
+    drawBar(250, midY, p2, scale, "#c0392b", "p2");
     
-    // Total Bar (Purple)
-    drawBar(450, midY, pTotal, "#9b59b6", "p_total");
+    // Total Bar
+    drawBar(450, midY, pTotal, scale, "#9b59b6", "p_total");
     
-    // Energy Bar (Optional cool feature: Kinetic Energy)
-    // KE is scalar, always positive.
+    // Energy Bar
     let ke = 0.5*state.m1*state.v1*state.v1 + 0.5*state.m2*state.v2*state.v2;
-    drawBar(550, midY + 70, ke, "#27ae60", "KE (J)", true); // True = Anchor bottom
+    drawBar(550, midY + 70, ke, 0.5, "#27ae60", "KE (J)", true); 
 }
 
 function drawCart(x, y, w, h, fill, stroke, m, v) {
-    // Body
     ctx.fillStyle = fill; ctx.fillRect(x, y, w, h);
     ctx.strokeStyle = stroke; ctx.lineWidth = 3; ctx.strokeRect(x, y, w, h);
     
-    // Wheels
     ctx.fillStyle = "#333";
     ctx.beginPath(); ctx.arc(x+15, y+h+5, 6, 0, Math.PI*2); ctx.fill();
     ctx.beginPath(); ctx.arc(x+w-15, y+h+5, 6, 0, Math.PI*2); ctx.fill();
     
-    // Mass Label
     ctx.fillStyle = "white"; ctx.font = "bold 12px sans-serif"; ctx.textAlign="center";
     ctx.fillText(m.toFixed(1)+"kg", x+w/2, y+h/2+5);
     
-    // Velocity Vector
     if(Math.abs(v) > 0.1) {
-        let vLen = v * 8; // Scale
+        let vLen = v * 8; 
         let vy = y - 15;
         let vx = x + w/2;
         drawVector(vx, vy, vLen, 0, stroke);
@@ -952,16 +945,13 @@ function drawCart(x, y, w, h, fill, stroke, m, v) {
     }
 }
 
-function drawBar(x, zeroY, val, color, label, anchorBottom=false) {
-    let scale = 3;
+function drawBar(x, zeroY, val, scale, color, label, anchorBottom=false) {
     let h = val * scale;
     
     ctx.fillStyle = color;
     if(anchorBottom) {
-        // For KE (always positive, distinct look)
         ctx.fillRect(x-15, zeroY - h, 30, h);
     } else {
-        // For Momentum (up/down from zero)
         ctx.fillRect(x-15, zeroY, 30, -h);
     }
     
@@ -977,7 +967,7 @@ function renderQuestions_5_1() {
     if(state.level === 0) {
         div.innerHTML = `
             <h4 style="color:#2980b9;">Level 1: The Sticky Crash</h4>
-            <p>Set &mu; (Elasticity) to <b>0%</b>. Set m<sub>1</sub>=2kg, v<sub>1</sub>=4m/s. Set m<sub>2</sub>=2kg, v<sub>2</sub>=0.</p>
+            <p>Set &mu; (Elasticity) to <b>0%</b>. Set m<sub>1</sub>=2kg, v<sub>1i</sub>=4m/s. Set m<sub>2</sub>=2kg, v<sub>2i</sub>=0.</p>
             <p>Calculate the final velocity when they stick together.</p>
             <input type="number" id="ans-0" placeholder="m/s" style="width:80px;">
             <button class="btn btn-green" style="width:auto;" onclick="checkAnswer_5_1(0)">Check</button>
@@ -986,7 +976,7 @@ function renderQuestions_5_1() {
     } else if(state.level === 1) {
         div.innerHTML = `
             <h4 style="color:#c0392b;">Level 2: The Head-On Collision</h4>
-            <p>Set &mu; to <b>0%</b>. Set m<sub>1</sub>=4kg, v<sub>1</sub>=4m/s. Set m<sub>2</sub>=4kg, v<sub>2</sub>=-4m/s.</p>
+            <p>Set &mu; to <b>0%</b>. Set m<sub>1</sub>=4kg, v<sub>1i</sub>=4m/s. Set m<sub>2</sub>=4kg, v<sub>2i</sub>=-4m/s.</p>
             <p>What is the total final momentum?</p>
             <input type="number" id="ans-1" placeholder="kg·m/s" style="width:80px;">
             <button class="btn btn-green" style="width:auto;" onclick="checkAnswer_5_1(1)">Check</button>
@@ -995,7 +985,7 @@ function renderQuestions_5_1() {
     } else if(state.level === 2) {
         div.innerHTML = `
             <h4 style="color:#8e44ad;">Level 3: Elastic Bounce</h4>
-            <p>Set &mu; to <b>100%</b>. Equal masses (2kg). v<sub>1</sub>=4m/s, v<sub>2</sub>=0.</p>
+            <p>Set &mu; to <b>100%</b>. Equal masses (2kg). v<sub>1i</sub>=4m/s, v<sub>2i</sub>=0.</p>
             <p>Predict the final velocity of the Red Cart (v<sub>2f</sub>).</p>
             <input type="number" id="ans-2" placeholder="m/s" style="width:80px;">
             <button class="btn btn-green" style="width:auto;" onclick="checkAnswer_5_1(2)">Check</button>
@@ -1004,8 +994,8 @@ function renderQuestions_5_1() {
     } else if(state.level === 3) {
          div.innerHTML = `
             <h4 style="color:#f39c12;">Level 4: AP Challenge</h4>
-            <p>Elastic (100%). m<sub>1</sub> = 1kg, v<sub>1</sub> = 6m/s. m<sub>2</sub> = 3kg, v<sub>2</sub> = 0.</p>
-            <p>Calculate v<sub>1final</sub> (Careful with the sign!).</p>
+            <p>Elastic (100%). m<sub>1</sub> = 1kg, v<sub>1i</sub> = 6m/s. m<sub>2</sub> = 3kg, v<sub>2i</sub> = 0.</p>
+            <p>Calculate v<sub>1f</sub> (Careful with the sign!).</p>
             <input type="number" id="ans-3" placeholder="m/s" style="width:80px;">
             <button class="btn btn-green" style="width:auto;" onclick="checkAnswer_5_1(3)">Check</button>
             <span id="fb-3"></span>
@@ -1024,20 +1014,15 @@ function checkAnswer_5_1(lvl) {
     let tol = 0.2;
     
     if(lvl === 0) {
-        // 2*4 + 0 = (4)v -> v=2
         if(Math.abs(val - 2.0) < tol) correct = true;
     }
     else if(lvl === 1) {
-        // 4*4 + 4*-4 = 16 - 16 = 0
         if(Math.abs(val - 0) < tol) correct = true;
     }
     else if(lvl === 2) {
-        // Newton's Cradle behavior: v1 stops, v2 takes 4.
         if(Math.abs(val - 4.0) < tol) correct = true;
     }
     else if(lvl === 3) {
-        // m1=1, v1=6. m2=3, v2=0. Elastic.
-        // v1f = (1-3)/(1+3) * 6 = (-2/4)*6 = -3 m/s
         if(Math.abs(val - (-3.0)) < tol) correct = true;
     }
     
