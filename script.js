@@ -54,7 +54,7 @@ function loadSim(id) {
 // ===============================================
 
 // ===============================================
-    // === UNIT 2.4: STATIC VS KINETIC FRICTION (FINAL v16 - PARADOX FIX) ===
+    // === UNIT 2.4: STATIC VS KINETIC FRICTION (FINAL v17 - GRAPH UPGRADE) ===
     // ===============================================
     function setup_2_4() {
         // Resize canvas to fit vertical vectors and graph (Protected setting)
@@ -65,7 +65,7 @@ function loadSim(id) {
             <h3>The Friction "Hump"</h3>
             <p><b>Static Friction</b> (<span class="var">f<sub>s</sub></span>) matches Applied Force. Increasing Mass/&mu;<sub>s</sub> raises the <i>maximum limit</i>.
             <br><b>Kinetic Friction</b> (<span class="var">f<sub>k</sub></span>) is constant (<span class="var">&mu;<sub>k</sub>F<sub>n</sub></span>).
-            <br><i><b>Tip:</b> Increase &mu;<sub>k</sub> while sliding to "slam on the brakes"!</i></p>`;
+            <br><i><b>Tip:</b> Watch the Green Line on the graph move when you change &mu;<sub>k</sub>!</i></p>`;
 
         document.getElementById('sim-controls').innerHTML = `
             <div class="control-group">
@@ -121,6 +121,7 @@ function loadSim(id) {
             graphData: [],
             running: true,
             lastFa: -1,
+            lastFriction: -1, // Track friction changes for graphing vertical lines
             timeScale: document.querySelector('input[name="spd"]:checked').value,
             maxFriction: 100 
         };
@@ -148,8 +149,6 @@ function loadSim(id) {
         // --- PHYSICS STATE MACHINE ---
         if (Math.abs(state.v) < 0.001) {
             // === STATIC REGION ===
-            // We stick if Applied Force is less than Static Max OR 
-            // if Kinetic Friction would be strong enough to prevent motion (Paradox Fix)
             let limit = Math.max(fs_max, fk); 
             
             if (state.Fa <= limit) {
@@ -160,7 +159,6 @@ function loadSim(id) {
                 document.getElementById('out-stat').innerText = "Static (Stuck)";
                 document.getElementById('out-stat').style.color = "#c0392b";
             } else {
-                // BREAKS LOOSE
                 state.v = 0.01; 
                 friction = fk; 
                 status = "kinetic";
@@ -170,9 +168,8 @@ function loadSim(id) {
             friction = fk; 
             status = "kinetic";
             
-            // Calculate Force Balance
-            if (state.Fa < fk) Fnet = state.Fa - fk; // Braking
-            else Fnet = state.Fa - fk; // Accelerating
+            if (state.Fa < fk) Fnet = state.Fa - fk;
+            else Fnet = state.Fa - fk;
             
             document.getElementById('out-stat').innerText = "Kinetic (Sliding)";
             document.getElementById('out-stat').style.color = "#27ae60";
@@ -182,13 +179,9 @@ function loadSim(id) {
             state.v += a * dt; 
             state.x += state.v * dt;
             
-            // === STOP TRAP ===
+            // STOP TRAP
             if (state.v <= 0) {
                 state.v = 0;
-                // PARADOX FIX:
-                // If we stopped, we check if we should stick.
-                // We stick if Fa <= fs_max (Normal) OR if Fa <= fk (High Kinetic)
-                // This prevents the jitter loop where it moves, hits strong kinetic, stops, slips on weak static, moves...
                 if (state.Fa <= fs_max || state.Fa <= fk) {
                     status = "static";
                     friction = state.Fa; 
@@ -220,7 +213,6 @@ function loadSim(id) {
             &nbsp;&nbsp;&minus;&nbsp;&nbsp; 
             <span style="font-size:${sizeFf}; font-weight:bold; color:#c0392b; transition: font-size 0.1s;">${fricVar}</span> 
             &nbsp;&nbsp;=&nbsp;&nbsp; ${Fnet.toFixed(1)} N`;
-            
         document.getElementById('eq-x').innerHTML = htmlX;
 
         // Equation Y
@@ -230,28 +222,28 @@ function loadSim(id) {
             &nbsp;&nbsp;&minus;&nbsp;&nbsp; 
             <span style="font-size:${sizeFy}; font-weight:bold; color:green; transition: font-size 0.1s;">F<sub>g</sub></span> 
             &nbsp;&nbsp;=&nbsp;&nbsp; 0`;
-            
         document.getElementById('eq-y').innerHTML = htmlY;
 
-        // Graphing
-        if(state.Fa !== state.lastFa || status === 'kinetic') {
-             if(state.Fa !== state.lastFa) {
-                 state.graphData.push({x: state.Fa, y: friction});
-                 state.lastFa = state.Fa;
-             }
+        // --- GRAPH DATA PUSH ---
+        // We push a point if F_app changes OR if Friction Force changes significantly 
+        // (This captures the vertical snap lines)
+        if(state.Fa !== state.lastFa || Math.abs(friction - state.lastFriction) > 0.1) {
+             state.graphData.push({x: state.Fa, y: friction});
+             state.lastFa = state.Fa;
+             state.lastFriction = friction;
         }
         
-        draw_2_4(friction, Fn, status);
+        draw_2_4(friction, Fn, status, fk, fs_max); // Pass fk and fs_max to draw function
         animId = requestAnimationFrame(loop_2_4);
     }
 
-    function draw_2_4(fVal, Fn, status) {
-        ctx.clearRect(0,0,700,600); // Clear taller canvas
+    function draw_2_4(fVal, Fn, status, fk, fs_max) {
+        ctx.clearRect(0,0,700,600); 
         
         // --- VISUALS ---
         let floorY = 160; 
         ctx.fillStyle = "#ecf0f1"; ctx.fillRect(0,0,700,200); 
-        ctx.fillStyle = "#bdc3c7"; ctx.fillRect(0,floorY,700,100); // Deep floor
+        ctx.fillStyle = "#bdc3c7"; ctx.fillRect(0,floorY,700,100); 
         
         let drawX = 150 + (state.x % 400); 
         let size = 30 + state.m * 4; 
@@ -277,24 +269,24 @@ function loadSim(id) {
             ctx.fillText(sub, x + mw, y + 5);
         }
 
-        // 1. Gravity (Fg)
+        // 1. Gravity
         let fgLen = (state.m * 9.8) * vectorScale; 
         drawVector(cx, cy + size/2, 0, fgLen, "green"); 
         drawLabel("F", "g", cx+5, cy + size/2 + fgLen + 10, "black");
 
-        // 2. Normal (Fn)
+        // 2. Normal
         let fnLen = fgLen; 
         drawVector(cx, cy - size/2, 0, -fnLen, "blue");
         drawLabel("F", "n", cx+5, cy - size/2 - fnLen - 5, "black");
 
-        // 3. Applied (Fapp)
+        // 3. Applied
         if(state.Fa > 0) {
             let faLen = state.Fa * 1.5; 
             drawVector(cx + size/2, cy, faLen, 0, "black");
             drawLabel("F", "app", cx + size/2 + faLen + 10, cy+4, "black");
         }
 
-        // 4. Friction (f)
+        // 4. Friction
         if(fVal > 0) {
             let fLen = fVal * 1.5;
             drawVector(cx - size/2, cy, -fLen, 0, "red");
@@ -309,12 +301,9 @@ function loadSim(id) {
         ctx.strokeStyle = "#7f8c8d"; ctx.lineWidth=1; ctx.setLineDash([2,2]);
         ctx.beginPath(); ctx.moveTo(bubbleX, bubbleY + r); ctx.lineTo(drawX + size/2, floorY); ctx.stroke();
         ctx.setLineDash([]);
-        
         ctx.fillStyle = "white"; ctx.beginPath(); ctx.arc(bubbleX, bubbleY, r, 0, Math.PI*2); ctx.fill();
         ctx.strokeStyle = "#333"; ctx.lineWidth=3; ctx.stroke();
-        
-        ctx.save();
-        ctx.beginPath(); ctx.rect(bubbleX-r, bubbleY-r, 2*r, 2*r); ctx.clip(); 
+        ctx.save(); ctx.beginPath(); ctx.rect(bubbleX-r, bubbleY-r, 2*r, 2*r); ctx.clip(); 
         ctx.strokeStyle = "#e67e22"; ctx.lineWidth=3; 
         let offset = (state.x * 20) % 20; 
         ctx.beginPath();
@@ -339,10 +328,26 @@ function loadSim(id) {
         ctx.fillText("Applied Force (0 - 100N)", 350, 550);
         ctx.save(); ctx.translate(20, 400); ctx.rotate(-Math.PI/2); ctx.fillText("Friction (0 - 100N)", 0, 0); ctx.restore();
 
-        // Plot
+        // 1. Draw Kinetic Level Line (Green Dashed)
+        let maxFric = state.maxFriction; 
+        let fkY = (gy + gh) - (fk / maxFric) * gh;
+        ctx.strokeStyle = "#27ae60"; ctx.setLineDash([5,5]); ctx.lineWidth=2;
+        ctx.beginPath(); ctx.moveTo(gx, fkY); ctx.lineTo(gx+gw, fkY); ctx.stroke();
+        ctx.fillStyle = "#27ae60"; ctx.textAlign="right"; ctx.font="12px sans-serif";
+        ctx.fillText("Kinetic Level", gx + gw - 5, fkY - 5);
+
+        // 2. Draw Static Max Line (Grey Dashed)
+        let fsY = (gy + gh) - (fs_max / maxFric) * gh;
+        ctx.strokeStyle = "#95a5a6"; ctx.setLineDash([5,5]); ctx.lineWidth=1;
+        ctx.beginPath(); ctx.moveTo(gx, fsY); ctx.lineTo(gx+gw, fsY); ctx.stroke();
+        ctx.fillStyle = "#7f8c8d"; ctx.textAlign="right";
+        ctx.fillText("Max Static (" + fs_max.toFixed(1) + "N)", gx + gw - 5, fsY - 5);
+        ctx.setLineDash([]);
+
+        // 3. Plot Data
         ctx.beginPath();
         ctx.strokeStyle = "#c0392b"; ctx.lineWidth=3;
-        let maxFa = 100; let maxFric = state.maxFriction; 
+        let maxFa = 100; 
         state.graphData.forEach((p, i) => {
             let plotX = gx + (p.x / maxFa) * gw;
             let plotY = (gy + gh) - (p.y / maxFric) * gh;
@@ -356,13 +361,4 @@ function loadSim(id) {
             let dotY = (gy + gh) - (last.y / maxFric) * gh;
             ctx.fillStyle = "black"; ctx.beginPath(); ctx.arc(dotX, dotY, 4, 0, Math.PI*2); ctx.fill();
         }
-        
-        // Limit Line
-        let fs_max = state.mu_s * Fn;
-        let limitY = (gy + gh) - (fs_max / maxFric) * gh;
-        ctx.strokeStyle = "#95a5a6"; ctx.setLineDash([5,5]); ctx.lineWidth=1;
-        ctx.beginPath(); ctx.moveTo(gx, limitY); ctx.lineTo(gx+gw, limitY); ctx.stroke();
-        ctx.fillStyle = "#7f8c8d"; ctx.textAlign="right";
-        ctx.fillText("Max Static (" + fs_max.toFixed(1) + "N)", gx + gw - 5, limitY - 5);
-        ctx.setLineDash([]);
     }
