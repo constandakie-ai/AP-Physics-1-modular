@@ -54,7 +54,7 @@ function loadSim(id) {
 // ===============================================
 
 // ===============================================
-    // === UNIT 2.4: STATIC VS KINETIC FRICTION (FINAL v25 - GAMIFIED) ===
+    // === UNIT 2.4: STATIC VS KINETIC FRICTION (FINAL v26 - AP MASTERY) ===
     // ===============================================
     function setup_2_4() {
         canvas.height = 600; 
@@ -63,17 +63,22 @@ function loadSim(id) {
         document.getElementById('sim-desc').innerHTML = `
             <h3>The Friction "Hump"</h3>
             <p><b>Static Friction</b> matches Applied Force up to a limit. <b>Kinetic Friction</b> is constant.
-            <br><i><b>Mission:</b> Answer the questions below to unlock the full controls!</i></p>`;
+            <br><i><b>Mission:</b> Answer the questions below to unlock controls and earn the Mastery Badge!</i></p>`;
 
         document.getElementById('sim-controls').innerHTML = `
-            <div style="background:#eef2f3; padding:10px; border-radius:5px; margin-bottom:15px; border:1px solid #ccc;">
-                <label style="font-weight:bold; margin-right:15px;">Mode:</label>
-                <label style="margin-right:15px; cursor:pointer;">
-                    <input type="radio" name="sim-mode" value="guided" checked onchange="setMode_2_4('guided')"> Guided Lab
-                </label>
-                <label style="cursor:pointer;">
-                    <input type="radio" name="sim-mode" value="challenge" onchange="setMode_2_4('challenge')"> Full Version
-                </label>
+            <div style="background:#eef2f3; padding:10px; border-radius:5px; margin-bottom:15px; border:1px solid #ccc; display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <label style="font-weight:bold; margin-right:15px;">Mode:</label>
+                    <label style="margin-right:15px; cursor:pointer;">
+                        <input type="radio" name="sim-mode" value="guided" checked onchange="setMode_2_4('guided')"> Guided Lab
+                    </label>
+                    <label style="cursor:pointer;">
+                        <input type="radio" name="sim-mode" value="challenge" onchange="setMode_2_4('challenge')"> Full Version
+                    </label>
+                </div>
+                <div id="mastery-badge" style="display:none; font-weight:bold; color:#f39c12; font-family:sans-serif;">
+                    <span style="font-size:1.5em;">&#9733;</span> AP MASTER
+                </div>
             </div>
 
             <div class="control-group">
@@ -124,7 +129,6 @@ function loadSim(id) {
 
     function updateState_2_4(key, val) {
         state[key] = parseFloat(val);
-        // Update labels
         if(key==='m') document.getElementById('v-m').innerText = state.m.toFixed(1);
         if(key==='mu_s') document.getElementById('v-mus').innerText = state.mu_s.toFixed(2);
         if(key==='mu_k') document.getElementById('v-muk').innerText = state.mu_k.toFixed(2);
@@ -133,31 +137,43 @@ function loadSim(id) {
     function setMode_2_4(mode) {
         state.mode = mode;
         const qDiv = document.getElementById('questions-section');
+        const badge = document.getElementById('mastery-badge');
+        
+        // Ensure badge visibility persists if earned
+        if(state.level >= 6) badge.style.display = 'block';
+
         if(mode === 'challenge') {
             qDiv.style.display = 'none';
-            state.level = 3; // Unlock everything
         } else {
             qDiv.style.display = 'block';
-            state.level = 0; // Reset to level 0
+            // Only reset to 0 if we haven't started. If they are on Q4, keep them there.
+            if(state.level < 0) state.level = 0;
             renderQuestions_2_4();
         }
         updateLocks_2_4();
     }
 
     function updateLocks_2_4() {
-        // LOCKING LOGIC:
+        // LOCKS:
         // Level 0: Lock Mass, Mus, Muk
         // Level 1: Lock Mus, Muk (Unlock Mass)
-        // Level 2: Lock none (Unlock Mus, Muk)
-        // Level 3: All Unlocked
+        // Level 2+: Unlock All (Full Version / Mastery)
         
         let lockM = (state.level < 1);
         let lockMu = (state.level < 2);
         
-        if(state.mode === 'challenge') { lockM = false; lockMu = false; }
+        // In challenge mode OR if Mastery levels reached (Level 3+), physics is unlocked
+        if(state.mode === 'challenge' || state.level >= 2) { lockM = false; lockMu = false; }
 
         let setLock = (id, locked) => {
             let el = document.getElementById(id);
+            // "Smart Lock" - only lock if moving? 
+            // The prompt implied the controls unlock permanently after Q3.
+            // But we keep the "Lock while moving" safety for guided mode, 
+            // UNLESS we are in the Mastery Levels (3+), where we need to brake.
+            
+            // Logic: If in guided mode levels 0-2, we enforce strict locks.
+            // If in Mastery (3+), we unlock everything so they can do the hard questions.
             el.disabled = locked;
             el.style.opacity = locked ? "0.4" : "1.0";
             el.style.cursor = locked ? "not-allowed" : "pointer";
@@ -172,45 +188,78 @@ function loadSim(id) {
         let val = parseFloat(document.getElementById('ans-'+qIdx).value);
         let correct = false;
         let feedback = "";
-        
-        // Tolerance
         let tol = 0.5;
 
-        if(qIdx === 0) {
-            // Q1: Calc Max Static Friction (Mus * m * 9.8)
+        // --- TUTORIAL LEVELS (0-2) ---
+        if(qIdx === 0) { // Max Static
             let target = state.mu_s * state.m * 9.8;
             if(Math.abs(val - target) < tol) correct = true;
         } 
-        else if(qIdx === 1) {
-            // Q2: Calc Kinetic Friction (Muk * m * 9.8)
+        else if(qIdx === 1) { // Kinetic Friction
             let target = state.mu_k * state.m * 9.8;
             if(Math.abs(val - target) < tol) correct = true;
         }
-        else if(qIdx === 2) {
-            // Q3: AP Challenge - Calc Acceleration
-            // a = Fnet / m = (Fapp - fk) / m
+        else if(qIdx === 2) { // Intro Acceleration
             let fk = state.mu_k * state.m * 9.8;
             let target = (state.Fa - fk) / state.m;
-            // If they are static, a=0
             if(state.Fa <= state.mu_s * state.m * 9.8) target = 0;
-            
             if(Math.abs(val - target) < 0.2) correct = true;
-            else feedback = " (Hint: Use Newton's 2nd Law. Is it moving?)";
+        }
+        // --- MASTERY LEVELS (3-5) ---
+        else if(qIdx === 3) { 
+            // Q: Constant Velocity Force
+            // Fapp must equal Fk.
+            let target = state.mu_k * state.m * 9.8;
+            if(Math.abs(val - target) < tol) correct = true;
+        }
+        else if(qIdx === 4) { 
+            // Q: Braking Acceleration (Negative)
+            // User sets Fapp < Fk. a = (Fapp - Fk)/m
+            let fk = state.mu_k * state.m * 9.8;
+            let target = (state.Fa - fk) / state.m;
+            // It must be moving for this to be valid
+            if(Math.abs(state.v) < 0.01) feedback = " (Get it moving first!)";
+            else if(Math.abs(val - target) < 0.2) correct = true;
+        }
+        else if(qIdx === 5) { 
+            // Q: The Static Trap
+            // If stationary, Friction = Fapp. NOT mu*Fn.
+            if(Math.abs(state.v) > 0.01) feedback = " (Stop the block first!)";
+            else {
+                let fsMax = state.mu_s * state.m * 9.8;
+                if(state.Fa > fsMax) feedback = " (It's slipping! Lower the force.)";
+                else {
+                    let target = state.Fa; // Newton's 1st Law
+                    let trap = fsMax;
+                    if(Math.abs(val - trap) < tol && Math.abs(val - target) > tol) 
+                        feedback = " (Careful! Is it at the limit?)";
+                    else if(Math.abs(val - target) < tol) correct = true;
+                }
+            }
         }
 
         let fbEl = document.getElementById('fb-'+qIdx);
         if(correct) {
-            fbEl.innerHTML = "<span style='color:green'>Correct! Unlocking next controls...</span>";
-            state.level++;
-            setTimeout(renderQuestions_2_4, 1500); // Delay before showing next level
+            fbEl.innerHTML = "<span style='color:green; font-weight:bold;'>Correct!</span>";
+            
+            // Level Up Logic
+            if(state.level === qIdx) state.level++;
+            
+            if(state.level >= 6) {
+                document.getElementById('mastery-badge').style.display = 'block';
+            }
+            
+            setTimeout(renderQuestions_2_4, 1000); 
             updateLocks_2_4();
         } else {
-            fbEl.innerHTML = "<span style='color:red'>Incorrect. Try again." + feedback + "</span>";
+            fbEl.innerHTML = "<span style='color:red'>Try again." + feedback + "</span>";
         }
     }
 
     function renderQuestions_2_4() {
         let div = document.getElementById('questions-section');
+        
+        // --- TUTORIAL PHASE ---
         if(state.level === 0) {
             div.innerHTML = `
                 <h4>Level 1: Static Limits</h4>
@@ -218,7 +267,7 @@ function loadSim(id) {
                 <p>Calculate the <b>Maximum Static Friction</b> force possible before it slips.</p>
                 <input type="number" id="ans-0" placeholder="Newtons" style="width:80px; padding:5px;">
                 <button class="btn btn-green" style="width:auto; display:inline-block;" onclick="checkAnswer_2_4(0)">Check</button>
-                <span id="fb-0" style="margin-left:10px; font-weight:bold;"></span>
+                <span id="fb-0" style="margin-left:10px;"></span>
                 <p style="font-size:0.85em; color:#666;"><i>Reward: Unlock Mass Slider</i></p>
             `;
         } else if(state.level === 1) {
@@ -228,24 +277,55 @@ function loadSim(id) {
                 <p>If the block is sliding, what is the constant <b>Kinetic Friction</b> force?</p>
                 <input type="number" id="ans-1" placeholder="Newtons" style="width:80px; padding:5px;">
                 <button class="btn btn-green" style="width:auto; display:inline-block;" onclick="checkAnswer_2_4(1)">Check</button>
-                <span id="fb-1" style="margin-left:10px; font-weight:bold;"></span>
+                <span id="fb-1" style="margin-left:10px;"></span>
                 <p style="font-size:0.85em; color:#666;"><i>Reward: Unlock All Coefficients</i></p>
             `;
         } else if(state.level === 2) {
             div.innerHTML = `
-                <h4>Level 3: The AP Challenge</h4>
+                <h4>Level 3: Newton's 2nd Law</h4>
                 <p>Set F<sub>app</sub> to <b>${state.Fa} N</b>.</p>
-                <p>Based on current Mass (${state.m}kg) and &mu;<sub>k</sub> (${state.mu_k}), calculate the <b>Acceleration</b> of the block.</p>
+                <p>Based on current Mass (${state.m}kg) and &mu;<sub>k</sub> (${state.mu_k}), calculate the <b>Acceleration</b>.</p>
                 <input type="number" id="ans-2" placeholder="m/s²" style="width:80px; padding:5px;">
                 <button class="btn btn-green" style="width:auto; display:inline-block;" onclick="checkAnswer_2_4(2)">Check</button>
-                <span id="fb-2" style="margin-left:10px; font-weight:bold;"></span>
-                <p style="font-size:0.85em; color:#666;"><i>Reward: Full Version Unlocked</i></p>
+                <span id="fb-2" style="margin-left:10px;"></span>
+                <p style="font-size:0.85em; color:#666;"><i>Reward: Unlock Full Version</i></p>
+            `;
+        } 
+        
+        // --- MASTERY PHASE ---
+        else if(state.level === 3) {
+            div.innerHTML = `
+                <h4 style="color:#d35400;">AP Mastery Q1: Constant Velocity</h4>
+                <p>Adjust F<sub>app</sub> so the block moves at <b>constant velocity</b> (a=0).</p>
+                <p>What Applied Force is required?</p>
+                <input type="number" id="ans-3" placeholder="Newtons" style="width:80px; padding:5px;">
+                <button class="btn btn-green" style="width:auto; display:inline-block;" onclick="checkAnswer_2_4(3)">Check</button>
+                <span id="fb-3" style="margin-left:10px;"></span>
+            `;
+        } else if(state.level === 4) {
+             div.innerHTML = `
+                <h4 style="color:#d35400;">AP Mastery Q2: The Brakes</h4>
+                <p>Get the block moving, then increase &mu;<sub>k</sub> so friction is larger than F<sub>app</sub>.</p>
+                <p>Calculate the <b>deceleration</b> (negative acceleration) at this moment.</p>
+                <input type="number" id="ans-4" placeholder="m/s²" style="width:80px; padding:5px;">
+                <button class="btn btn-green" style="width:auto; display:inline-block;" onclick="checkAnswer_2_4(4)">Check</button>
+                <span id="fb-4" style="margin-left:10px;"></span>
+            `;
+        } else if(state.level === 5) {
+             div.innerHTML = `
+                <h4 style="color:#c0392b;">AP Mastery Q3: The Static Trap</h4>
+                <p><b>Stop the block.</b> Set &mu;<sub>s</sub>=${state.mu_s}. Set F<sub>app</sub> to <b>10 N</b>.</p>
+                <p>What is the exact magnitude of the <b>Friction Force</b>?</p>
+                <input type="number" id="ans-5" placeholder="Newtons" style="width:80px; padding:5px;">
+                <button class="btn btn-green" style="width:auto; display:inline-block;" onclick="checkAnswer_2_4(5)">Check</button>
+                <span id="fb-5" style="margin-left:10px;"></span>
+                <p style="font-size:0.85em; color:#666;"><i>Hint: Check the "Impossible Zone"</i></p>
             `;
         } else {
             div.innerHTML = `
-                <h3 style="color:#27ae60;">Congratulations!</h3>
-                <p>You have mastered the Friction Lab. All controls are now unlocked.</p>
-                <p><b>Challenge Mode Enabled:</b> You can now adjust &mu;<sub>k</sub> while sliding to simulate braking!</p>
+                <h3 style="color:#f39c12;">&#9733; AP PHYSICS MASTER &#9733;</h3>
+                <p>You have completed all challenges. You understand the difference between static limits, kinetic constant, and Newton's laws!</p>
+                <p><i>The badge at the top is yours.</i></p>
             `;
         }
     }
@@ -268,7 +348,9 @@ function loadSim(id) {
         };
         
         // Initial setup
-        if(state.mode === 'challenge') state.level = 3;
+        if(state.mode === 'challenge') {
+             // If they switch to challenge, they can play freely, but it doesn't solve questions.
+        }
         setMode_2_4(state.mode);
         
         loop_2_4(); 
@@ -334,7 +416,16 @@ function loadSim(id) {
             }
         }
         
-        // --- DYNAMIC LOCKING IS HANDLED BY updateLocks_2_4() called on state change ---
+        // --- DYNAMIC LOCKING ---
+        let sliders = document.querySelectorAll('.phys-slider');
+        // Lock only if in Guided Mode (Levels 0-2) AND moving.
+        // Once we hit Level 3 (Mastery), we unlock so they can do braking experiments.
+        let shouldLock = (state.mode === 'guided' && state.level < 3 && Math.abs(state.v) > 0.001);
+        
+        sliders.forEach(s => {
+            s.disabled = shouldLock;
+            s.style.opacity = shouldLock ? "0.5" : "1.0";
+        });
 
         document.getElementById('out-ff').innerText = friction.toFixed(1);
         
@@ -475,7 +566,6 @@ function loadSim(id) {
         ctx.translate(gx + gw/4, gy + gh/2.2); 
         let angle = Math.atan2(-gh, gw);
         ctx.rotate(angle); 
-        
         ctx.textAlign = "center";
         ctx.fillStyle = "rgba(127, 140, 141, 0.8)"; 
         ctx.font = "bold 14px sans-serif";
