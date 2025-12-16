@@ -54,7 +54,7 @@ function loadSim(id) {
 // ===============================================
 
 // ===============================================
-    // === UNIT 2.4: STATIC VS KINETIC FRICTION (FINAL v22 - TEXT ROTATION FIX) ===
+    // === UNIT 2.4: STATIC VS KINETIC FRICTION (FINAL v23 - BUBBLE RAISED) ===
     // ===============================================
     function setup_2_4() {
         // Resize canvas to fit vertical vectors and graph (Protected setting)
@@ -291,9 +291,9 @@ function loadSim(id) {
             drawLabel("f", labelChar, labelX, labelY, "black");
         }
 
-        // --- MICROSCOPIC VIEW (LEFT) ---
+        // --- MICROSCOPIC VIEW (RAISED) ---
         let bubbleX = 100; 
-        let bubbleY = 80;  
+        let bubbleY = 60;  // RAISED TO 60 (Text is at y=10)
         let r = 45;
         ctx.strokeStyle = "#7f8c8d"; ctx.lineWidth=1; ctx.setLineDash([2,2]);
         ctx.beginPath(); ctx.moveTo(bubbleX, bubbleY + r); ctx.lineTo(drawX + size/2, floorY); ctx.stroke();
@@ -326,23 +326,18 @@ function loadSim(id) {
         ctx.fillStyle = "rgba(127, 140, 141, 0.15)"; 
         ctx.fill();
         
-        // Label for Impossible Zone (FIXED ROTATION)
+        // Label for Impossible Zone (ROTATED)
         ctx.save();
-        ctx.translate(gx + gw/4, gy + gh/2.2); // Position text nicely in the zone
-        
-        // CALCULATE ANGLE: atan2(-height, width) gives exact slope of diagonal
+        ctx.translate(gx + gw/4, gy + gh/2.2); 
         let angle = Math.atan2(-gh, gw);
         ctx.rotate(angle); 
         
         ctx.textAlign = "center";
         ctx.fillStyle = "rgba(127, 140, 141, 0.8)"; 
-        
         ctx.font = "bold 14px sans-serif";
         ctx.fillText("Impossible Region", 0, 0);
-        
         ctx.font = "italic 12px sans-serif";
         ctx.fillText("(static)", 0, 15); 
-
         ctx.restore();
 
         // Axes
